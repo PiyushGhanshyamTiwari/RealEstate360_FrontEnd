@@ -43,6 +43,11 @@ export class ProfileSetupComponent implements OnInit {
 
   selectedFile: File | null = null;
 
+  get userAvatar(): { emoji: string; color: string } {
+    const user = this.authService.currentUserValue;
+    return this.authService.getAvatarForUser(user?.userId, user?.emailId);
+  }
+
   get initials(): string {
     const name = this.authService.currentUserValue?.userName || '';
     if (!name) return 'U';

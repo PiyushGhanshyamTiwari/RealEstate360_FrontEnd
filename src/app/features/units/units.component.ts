@@ -23,6 +23,33 @@ export class UnitsComponent implements OnInit {
   ownerProperties: PropertyOutputDTO[] = [];
   loading = true;
   isOwner = false;
+
+  // Pagination helper fields
+  page = 1;
+  pageSize = 5;
+
+  get paginatedUnits(): UnitOutputDTO[] {
+    const start = (this.page - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.units.slice(start, end);
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  totalPages(totalItems: number): number {
+    return Math.ceil(totalItems / this.pageSize);
+  }
+
+  getPages(totalItems: number): number[] {
+    const total = this.totalPages(totalItems);
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
   role = '';
   userId: number | null = null;
 
@@ -102,6 +129,7 @@ export class UnitsComponent implements OnInit {
     ).subscribe({
       next: (data) => {
         this.units = data;
+        this.page = 1;
         this.loading = false;
       },
       error: () => {
@@ -203,6 +231,8 @@ export class UnitsComponent implements OnInit {
   openDetailView(unit: UnitOutputDTO): void {
   this.selectedUnit = unit;
   this.newAmenityName = '';
+  this.currentPhotoIndex = 0;
+  this.isLightboxOpen = false;
   
   this.photos = [];
   if (unit.propertyPhotos) {
@@ -211,22 +241,6 @@ export class UnitsComponent implements OnInit {
       caption: unit.propertyPhotos?.[Number(photoId)],
       imageUrl: '' // Add a placeholder for the object URL string
     }));
-
-    // Fetch binary content for each photo and build the local preview URL
-    // this.photos.forEach(photo => {
-    //   this.apiService.downloadPhoto(photo.photoId).subscribe({
-    //     next: (blob: Blob) => {
-    //       // Convert the raw binary blob into a renderable browser URL string
-    //       photo.imageUrl = window.URL.createObjectURL(blob);
-    //      // console.log(photo.imageUrl)
-    //     },
-    //     error: () => {
-    //       // Fallback if image fails to load (can use a placeholder image path)
-    //       photo.imageUrl = 'assets/placeholder-image.jpg'; 
-    //     }
-    //   });
-    // });
-
   }
 }
 
@@ -238,6 +252,50 @@ private sanitizer = inject(DomSanitizer); // Inject it
 
   closeDetailView(): void {
     this.selectedUnit = null;
+    this.isLightboxOpen = false;
+  }
+
+  // Carousel & Lightbox browsing variables and methods
+  currentPhotoIndex = 0;
+  isLightboxOpen = false;
+  touchStartX = 0;
+  touchEndX = 0;
+
+  prevPhoto(): void {
+    if (this.photos.length <= 1) return;
+    this.currentPhotoIndex = (this.currentPhotoIndex - 1 + this.photos.length) % this.photos.length;
+  }
+
+  nextPhoto(): void {
+    if (this.photos.length <= 1) return;
+    this.currentPhotoIndex = (this.currentPhotoIndex + 1) % this.photos.length;
+  }
+
+  openLightbox(index: number): void {
+    this.currentPhotoIndex = index;
+    this.isLightboxOpen = true;
+  }
+
+  closeLightbox(): void {
+    this.isLightboxOpen = false;
+  }
+
+  onTouchStart(event: TouchEvent): void {
+    this.touchStartX = event.changedTouches[0].screenX;
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    this.touchEndX = event.changedTouches[0].screenX;
+    this.handleSwipe();
+  }
+
+  handleSwipe(): void {
+    const swipeThreshold = 50;
+    if (this.touchEndX < this.touchStartX - swipeThreshold) {
+      this.nextPhoto();
+    } else if (this.touchEndX > this.touchStartX + swipeThreshold) {
+      this.prevPhoto();
+    }
   }
 
   onAddAmenity(): void {
@@ -266,23 +324,39 @@ private sanitizer = inject(DomSanitizer); // Inject it
 
   onUploadPhoto(event: any): void {
     if (event.target.files && event.target.files.length > 0 && this.selectedUnit) {
-      const file: File = event.target.files[0];
+      const files: FileList = event.target.files;
       const userName = this.authService.currentUserValue?.userName || 'Owner';
+      let successCount = 0;
 
-      this.apiService.uploadPhoto(this.selectedUnit.unitId, file, userName, 'Unit Photo').subscribe({
-        next: (photo) => {
-          this.photos.push({
-            photoId: photo.photoId,
-            caption: photo.caption
-          });
-          this.successMessage = 'Photo uploaded successfully!';
-          setTimeout(() => this.successMessage = '', 3000);
-        },
-        error: () => {
-          this.errorMessage = 'Photo upload failed.';
-          setTimeout(() => this.errorMessage = '', 3000);
-        }
-      });
+      for (let i = 0; i < files.length; i++) {
+        const file: File = files[i];
+        this.apiService.uploadPhoto(this.selectedUnit.unitId, file, userName, `Unit Photo ${i + 1}`).subscribe({
+          next: (photo) => {
+            successCount++;
+            // Add to local photos array for active view
+            this.photos.push({
+              photoId: photo.photoId,
+              caption: photo.caption
+            });
+
+            // Add to selectedUnit.propertyPhotos map so it persists in the session DTO
+            if (!this.selectedUnit!.propertyPhotos) {
+              this.selectedUnit!.propertyPhotos = {};
+            }
+            this.selectedUnit!.propertyPhotos[photo.photoId] = photo.caption || 'Unit Photo';
+
+            // Set current view to the newly uploaded photo
+            this.currentPhotoIndex = this.photos.length - 1;
+
+            this.successMessage = `${successCount} photo(s) uploaded successfully!`;
+            setTimeout(() => this.successMessage = '', 3000);
+          },
+          error: () => {
+            this.errorMessage = 'Some photo uploads failed.';
+            setTimeout(() => this.errorMessage = '', 3000);
+          }
+        });
+      }
     }
   }
 

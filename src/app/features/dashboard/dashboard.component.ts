@@ -22,6 +22,11 @@ export class DashboardComponent implements OnInit {
   profileMissing = false;
   today = new Date();
 
+  get userAvatar(): { emoji: string; color: string } {
+    const user = this.authService.currentUserValue;
+    return this.authService.getAvatarForUser(user?.userId, user?.emailId);
+  }
+
   // Admin stats
   adminStats = {
     usersCount: 0,
@@ -39,7 +44,8 @@ export class DashboardComponent implements OnInit {
 
   // Tenant stats
   tenantStats = {
-    applicationsCount: 0
+    applicationsCount: 0,
+    maintenanceCount: 0
   };
 
   // Technician stats
@@ -159,6 +165,16 @@ export class DashboardComponent implements OnInit {
         catchError(() => of([]))
       ).subscribe(apps => {
         this.tenantStats.applicationsCount = apps.length;
+      });
+
+      this.apiService.getAllSchedules().pipe(
+        catchError(() => {
+          const stored = localStorage.getItem(`re360_schedules_tenant_${this.userId}`);
+          return of(stored ? JSON.parse(stored) : []);
+        })
+      ).subscribe((schedules: any[]) => {
+        const mySchedules = schedules.filter((s: any) => s.userId === this.userId);
+        this.tenantStats.maintenanceCount = mySchedules.filter((s: any) => s.status !== 'COMPLETED' && s.status !== 'RESOLVED' && s.status !== 'CLOSED').length;
       });
     } else if (this.role === 'TECHNICIAN') {
       if (!this.userId) return;

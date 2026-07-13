@@ -84,4 +84,34 @@ export class AuthService {
     localStorage.removeItem('re360_user');
     this.currentUserSubject.next(null);
   }
+
+  avatarOptions = [
+    { id: 'avatar_1', emoji: '🧑‍💻', color: '#4f46e5' },
+    { id: 'avatar_2', emoji: '👩‍💼', color: '#db2777' },
+    { id: 'avatar_3', emoji: '🧑‍🚀', color: '#0ea5e9' },
+    { id: 'avatar_4', emoji: '🦁', color: '#f59e0b' },
+    { id: 'avatar_5', emoji: '🦊', color: '#10b981' },
+    { id: 'avatar_6', emoji: '🐼', color: '#8b5cf6' },
+    { id: 'avatar_7', emoji: '🦄', color: '#ec4899' },
+    { id: 'avatar_8', emoji: '🐨', color: '#64748b' }
+  ];
+
+  getAvatarForUser(userId?: number, emailId?: string): { emoji: string; color: string } {
+    let avatarId = '';
+    if (userId) {
+      avatarId = localStorage.getItem(`re360_avatar_${userId}`) || '';
+    }
+    if (!avatarId && emailId) {
+      avatarId = localStorage.getItem(`re360_avatar_${emailId}`) || '';
+    }
+    
+    if (!avatarId) {
+      // Deterministic fallback based on userId
+      const index = (userId || 0) % this.avatarOptions.length;
+      return this.avatarOptions[index];
+    }
+
+    const matched = this.avatarOptions.find(opt => opt.id === avatarId);
+    return matched || this.avatarOptions[0];
+  }
 }

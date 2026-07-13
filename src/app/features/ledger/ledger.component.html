@@ -1,7 +1,8 @@
 <div class="animated-fade-in">
-  <div class="mb-4">
-    <h1 class="h2 text-gradient mb-1">Company Financial Ledger</h1>
-    <p class="text-muted">Track monthly rent collections, profit margins, and corporate balances</p>
+  <div class="listings-hero-banner p-4 rounded shadow-sm mb-4 text-white"
+       style="background: linear-gradient(rgba(9, 34, 68, 0.8), rgba(9, 34, 68, 0.9)), url('/listings_banner.jpg') no-repeat center center/cover;">
+    <h1 class="h2 text-white fw-bold mb-1">Company Financial Ledger</h1>
+    <p class="mb-0 text-white-50">Track monthly rent collections, profit margins, and corporate balances</p>
   </div>
 
   <!-- ERROR ALERTS -->
@@ -45,7 +46,7 @@
     <div class="col-md-6">
       <div class="card glass-panel p-4 text-center border-start border-primary border-4">
         <span class="text-muted small">Total Collections</span>
-        <h2 class="fw-bold text-dark mt-1">$ {{ totalCollected | number:'1.2-2' }}</h2>
+        <h2 class="fw-bold text-dark mt-1">₹ {{ totalCollected | number:'1.2-2' }}</h2>
         <div class="progress mt-3 bg-light" style="height: 6px;">
           <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
         </div>
@@ -54,12 +55,20 @@
     <div class="col-md-6">
       <div class="card glass-panel p-4 text-center border-start border-success border-4">
         <span class="text-muted small">Net Company Profit</span>
-        <h2 class="fw-bold text-success mt-1">$ {{ totalProfit | number:'1.2-2' }}</h2>
+        <h2 class="fw-bold text-success mt-1">₹ {{ totalProfit | number:'1.2-2' }}</h2>
         <div class="progress mt-3 bg-light" style="height: 6px;">
           <div class="progress-bar bg-success" role="progressbar" [style.width.%]="averageProfitPercent"></div>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- GENERATE REPORT BUTTON (ACCOUNT OFFICER & ADMIN ONLY) -->
+  <div class="d-flex justify-content-end mb-3" *ngIf="entries.length > 0">
+    <button (click)="generateReport()" class="btn btn-success d-flex align-items-center gap-2 shadow-sm">
+      <i class="bi bi-graph-up-arrow"></i>
+      <span>Generate Financial Report</span>
+    </button>
   </div>
 
   <!-- LEDGER RECORDS TABLE -->
@@ -81,7 +90,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let ent of entries">
+          <tr *ngFor="let ent of paginatedEntries">
             <td><strong class="text-dark">#{{ ent.ledgerEntryId }}</strong></td>
             <td>Invoice #{{ ent.invoiceId }}</td>
             <td>
@@ -91,13 +100,34 @@
             <td>
               <span class="badge bg-light border border-secondary text-secondary">{{ ent.unitType }}</span>
             </td>
-            <td><strong class="text-dark">$ {{ ent.amountPaid }}</strong></td>
+            <td><strong class="text-dark">₹ {{ ent.amountPaid }}</strong></td>
             <td>{{ ent.profitPercent }}%</td>
-            <td><strong class="text-success">$ {{ ent.profitAmount }}</strong></td>
+            <td><strong class="text-success">₹ {{ ent.profitAmount }}</strong></td>
             <td>{{ ent.createdAt | date:'medium' }}</td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pagination controls -->
+    <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="entries.length > pageSize">
+      <span class="text-muted small">
+        Showing {{ (page - 1) * pageSize + 1 }} to {{ min(page * pageSize, entries.length) }} of {{ entries.length }} entries
+      </span>
+      <div class="btn-group shadow-sm">
+        <button [disabled]="page === 1" (click)="page = page - 1" class="btn btn-sm btn-outline-secondary py-1 px-2.5">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        <button *ngFor="let p of getPages(entries.length)" 
+                (click)="page = p" 
+                class="btn btn-sm py-1 px-2.5"
+                [ngClass]="page === p ? 'btn-primary text-white' : 'btn-outline-secondary'">
+          {{ p }}
+        </button>
+        <button [disabled]="page === totalPages(entries.length)" (click)="page = page + 1" class="btn btn-sm btn-outline-secondary py-1 px-2.5">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -107,3 +137,235 @@
     <p class="text-muted small mb-0">There are no financial ledger entries recorded for {{ getMonthName(queryMonth) }} {{ queryYear }}.</p>
   </div>
 </div>
+
+<!-- FINANCIAL REPORT MODAL OVERLAY -->
+<div *ngIf="showReport" class="modal-overlay d-flex align-items-center justify-content-center" style="z-index: 1050; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(9, 34, 68, 0.7); backdrop-filter: blur(4px);">
+  <div class="card glass-panel p-4 p-sm-5 w-100 animated-fade-in mx-3 shadow-lg border-0" style="max-width: 900px; max-height: 92vh; overflow-y: auto; background: #ffffff !important; border-radius: 8px;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary border-opacity-10 pb-3">
+      <div>
+        <h3 class="fw-bold mb-1 text-primary"><i class="bi bi-bar-chart-line me-2"></i>Performance Analysis Report</h3>
+        <p class="text-muted small mb-0">Statement Period: {{ getMonthName(queryMonth) }} {{ queryYear }}</p>
+      </div>
+      <div class="d-flex align-items-center">
+        <button (click)="exportPDF()" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2 me-3 px-3 py-1.5 shadow-sm">
+          <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </button>
+        <button (click)="showReport = false" class="btn-close" style="filter: grayscale(1) invert(0);"></button>
+      </div>
+    </div>
+
+    <!-- Toggle Buttons for Report Mode -->
+    <div class="d-flex justify-content-center mb-4">
+      <div class="btn-group shadow-sm" role="group">
+        <button type="button" class="btn btn-sm px-4 py-2" 
+                [ngClass]="reportMode === 'month' ? 'btn-primary text-white' : 'btn-outline-secondary'"
+                (click)="reportMode = 'month'">
+          <i class="bi bi-calendar-event me-1"></i> Month-wise Report
+        </button>
+        <button type="button" class="btn btn-sm px-4 py-2" 
+                [ngClass]="reportMode === 'year' ? 'btn-primary text-white' : 'btn-outline-secondary'"
+                (click)="reportMode = 'year'">
+          <i class="bi bi-calendar3 me-1"></i> Year-wise Report ({{ activeReportYear }})
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State for Year-wise report -->
+    <div *ngIf="loadingReportData" class="text-center py-5">
+      <div class="spinner-border text-primary mb-3" role="status"></div>
+      <p class="text-muted small">Aggregating annual transaction logs, please wait...</p>
+    </div>
+
+    <div *ngIf="!loadingReportData">
+      <!-- ================== MONTH-WISE REPORT VIEW ================== -->
+      <div *ngIf="reportMode === 'month'">
+        <!-- Overview Stats Cards -->
+        <div class="row g-3 mb-4 text-dark">
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Total Logs</span>
+              <h4 class="fw-bold text-dark mb-0">{{ entries.length }}</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Gross Collections</span>
+              <h4 class="fw-bold text-primary mb-0">₹{{ totalCollected | number:'1.0-0' }}</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Net Yield</span>
+              <h4 class="fw-bold text-success mb-0">₹{{ totalProfit | number:'1.0-0' }}</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Profit Share</span>
+              <h4 class="fw-bold text-warning mb-0">{{ averageProfitPercent | number:'1.1-1' }}%</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="row g-4 mb-4 text-dark">
+          <!-- Donut Chart -->
+          <div class="col-md-6">
+            <div class="border p-4 rounded h-100 bg-light text-center d-flex flex-column align-items-center justify-content-center">
+              <h6 class="fw-bold text-dark mb-3">Profit vs. Cost Allocation</h6>
+              
+              <div class="position-relative d-inline-block" style="width: 160px; height: 160px;">
+                <svg width="160" height="160" viewBox="0 0 42 42" style="transform: rotate(-90deg);">
+                  <circle cx="21" cy="21" r="15.915" fill="transparent"></circle>
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#dfe4ec" stroke-width="4"></circle>
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" 
+                          stroke="#ff5a00" stroke-width="4" 
+                          [attr.stroke-dasharray]="averageProfitPercent + ' ' + (100 - averageProfitPercent)" 
+                          stroke-dashoffset="0" style="transition: stroke-dasharray 0.8s ease-in-out;"></circle>
+                </svg>
+                <div class="position-absolute top-50 start-50 translate-middle text-center">
+                  <span class="text-muted" style="font-size: 0.65rem; display: block;">Yield</span>
+                  <strong class="fs-5 text-dark">{{ averageProfitPercent | number:'1.0-0' }}%</strong>
+                </div>
+              </div>
+              
+              <div class="d-flex justify-content-center gap-3 mt-3 w-100">
+                <span class="small" style="font-size: 0.75rem;"><i class="bi bi-circle-fill text-muted me-1"></i> Cost ({{ 100 - averageProfitPercent | number:'1.0-0' }}%)</span>
+                <span class="small" style="font-size: 0.75rem;"><i class="bi bi-circle-fill me-1" style="color: #ff5a00;"></i> Profit ({{ averageProfitPercent | number:'1.0-0' }}%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bar Chart -->
+          <div class="col-md-6">
+            <div class="border p-4 rounded h-100 bg-light">
+              <h6 class="fw-bold text-dark mb-3 text-center">Top Rent Collections</h6>
+              
+              <div class="d-flex align-items-end justify-content-around pt-3" style="height: 140px;">
+                <div *ngFor="let ent of getTopEntries()" class="text-center position-relative w-100 d-flex flex-column align-items-center">
+                  <div class="small text-muted mb-1" style="font-size: 0.65rem;">₹{{ ent.amountPaid | number:'1.0-0' }}</div>
+                  <div class="bg-primary rounded-top" 
+                       [style.height.px]="getBarHeight(ent.amountPaid)" 
+                       style="width: 24px; transition: height 0.6s ease-out; background-color: var(--primary-color) !important;"></div>
+                  <div class="small text-dark mt-2 fw-semibold" style="font-size: 0.68rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 60px;">#{{ ent.ledgerEntryId }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================== YEAR-WISE REPORT VIEW ================== -->
+      <div *ngIf="reportMode === 'year'">
+        <!-- Overview Stats Cards -->
+        <div class="row g-3 mb-4 text-dark">
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Active Months</span>
+              <h4 class="fw-bold text-dark mb-0">12</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Annual Collections</span>
+              <h4 class="fw-bold text-primary mb-0">₹{{ getYearlyTotalRevenue() | number:'1.0-0' }}</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Annual Yield</span>
+              <h4 class="fw-bold text-success mb-0">₹{{ getYearlyTotalProfit() | number:'1.0-0' }}</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Avg Profit Share</span>
+              <h4 class="fw-bold text-warning mb-0">{{ getYearlyProfitPercent() | number:'1.1-1' }}%</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trend Polyline Chart & Donut Chart -->
+        <div class="row g-4 mb-4 text-dark">
+          <!-- Donut Allocation -->
+          <div class="col-md-4">
+            <div class="border p-4 rounded h-100 bg-light text-center d-flex flex-column align-items-center justify-content-center">
+              <h6 class="fw-bold text-dark mb-3">Annual Share</h6>
+              
+              <div class="position-relative d-inline-block" style="width: 130px; height: 130px;">
+                <svg width="130" height="130" viewBox="0 0 42 42" style="transform: rotate(-90deg);">
+                  <circle cx="21" cy="21" r="15.915" fill="transparent"></circle>
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#dfe4ec" stroke-width="4"></circle>
+                  <circle cx="21" cy="21" r="15.915" fill="transparent" 
+                          stroke="#ff5a00" stroke-width="4" 
+                          [attr.stroke-dasharray]="getYearlyProfitPercent() + ' ' + (100 - getYearlyProfitPercent())" 
+                          stroke-dashoffset="0" style="transition: stroke-dasharray 0.8s ease-in-out;"></circle>
+                </svg>
+                <div class="position-absolute top-50 start-50 translate-middle text-center">
+                  <strong class="fs-6 text-dark">{{ getYearlyProfitPercent() | number:'1.0-0' }}%</strong>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <span class="small d-block" style="font-size: 0.72rem;"><i class="bi bi-circle-fill text-muted me-1"></i> Cost ({{ 100 - getYearlyProfitPercent() | number:'1.0-0' }}%)</span>
+                <span class="small d-block" style="font-size: 0.72rem;"><i class="bi bi-circle-fill me-1" style="color: #ff5a00;"></i> Profit ({{ getYearlyProfitPercent() | number:'1.0-0' }}%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SVG Polyline Line Chart -->
+          <div class="col-md-8">
+            <div class="border p-4 rounded h-100 bg-light">
+              <h6 class="fw-bold text-dark mb-3 text-center">Revenue Trend (Jan - Dec)</h6>
+              
+              <div class="d-flex justify-content-center pt-3 align-items-center" style="height: 180px; overflow-x: auto;">
+                <svg width="380" height="180" viewBox="0 0 380 180" style="overflow: visible;">
+                  <!-- Grid lines -->
+                  <line x1="20" y1="140" x2="360" y2="140" stroke="#e2e8f0" stroke-width="1" />
+                  <line x1="20" y1="85" x2="360" y2="85" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+                  <line x1="20" y1="30" x2="360" y2="30" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+                  
+                  <!-- Trend Line (Revenue) -->
+                  <polyline fill="none" stroke="#0056df" stroke-width="3" 
+                            [attr.points]="getLinePoints(monthlyRevenueData)" 
+                            style="transition: all 0.5s ease-in-out; stroke: var(--primary-color) !important;" />
+                  
+                  <!-- Nodes / Tooltips -->
+                  <g *ngFor="let pt of getLineNodes(monthlyRevenueData)">
+                    <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="5" fill="#0056df" 
+                            stroke="#ffffff" stroke-width="1.5" style="fill: var(--primary-color) !important;" />
+                    <!-- Month Labels -->
+                    <text [attr.x]="pt.x" y="160" text-anchor="middle" font-size="9" fill="#64748b" font-weight="semibold">
+                      {{ pt.month }}
+                    </text>
+                    <!-- Values above nodes -->
+                    <text [attr.x]="pt.x" [attr.y]="pt.y - 10" text-anchor="middle" font-size="8" fill="#1e293b" font-weight="bold" *ngIf="pt.val > 0">
+                      ₹{{ pt.val | number:'1.0-0' }}
+                    </text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Analysis Text -->
+      <div class="bg-light p-3 rounded border mb-4 text-dark text-start">
+        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-lightbulb text-warning me-1"></i>Analytical Insights & Observations</h6>
+        <p class="small text-muted mb-0" *ngIf="reportMode === 'month'">
+          The average margin for the current period resolves to <strong>{{ averageProfitPercent | number:'1.1-1' }}%</strong>. Cost structures remain stable at <strong>{{ 100 - averageProfitPercent | number:'1.1-1' }}%</strong>. Top transactional velocities indicate robust liquidity cycles. Recommendations are set to retain operational cash flows within the 99acres parameters to preserve balance reserves.
+        </p>
+        <p class="small text-muted mb-0" *ngIf="reportMode === 'year'">
+          Annual operations aggregated across the year {{ activeReportYear }} show an overall collection volume of <strong>₹{{ getYearlyTotalRevenue() | number:'1.0-0' }}</strong> with a net performance yield of <strong>₹{{ getYearlyTotalProfit() | number:'1.0-0' }}</strong>. The annual yield margin stands stable at <strong>{{ getYearlyProfitPercent() | number:'1.1-1' }}%</strong>. Ledger trends reflect balanced performance across all housing units.
+        </p>
+      </div>
+
+      <div class="d-flex justify-content-end">
+        <button (click)="showReport = false" class="btn btn-secondary px-4 py-2">Close Report</button>
+      </div>
+    </div>
+  </div>
+</div>
+

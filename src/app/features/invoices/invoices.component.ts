@@ -2,7 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { InvoiceOutputDTO, InvoiceDefaultersOutputDto } from '../../core/models/models';
+import { InvoiceOutputDTO, InvoiceDefaultersOutputDto, LeaseOutputDTO } from '../../core/models/models';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -23,9 +23,45 @@ export class InvoicesComponent implements OnInit {
   invoices: InvoiceOutputDTO[] = [];
   defaulters: InvoiceDefaultersOutputDto[] = [];
   searchLeaseId = '';
+  leases: LeaseOutputDTO[] = [];
+
+  // Pagination helper fields
+  pageInvoices = 1;
+  pageDefaulters = 1;
+  pageSize = 5;
+
+  get paginatedInvoices(): InvoiceOutputDTO[] {
+    const start = (this.pageInvoices - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.invoices.slice(start, end);
+  }
+
+  get paginatedDefaulters(): InvoiceDefaultersOutputDto[] {
+    const start = (this.pageDefaulters - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.defaulters.slice(start, end);
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  totalPages(totalItems: number): number {
+    return Math.ceil(totalItems / this.pageSize);
+  }
+
+  getPages(totalItems: number): number[] {
+    const total = this.totalPages(totalItems);
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
 
   loadingInvoices = false;
   loadingDefaulters = false;
+  loadingLeases = false;
   showDefaulters = false;
 
   hasBillingAccess = false;
@@ -55,6 +91,10 @@ export class InvoicesComponent implements OnInit {
       if (this.isAccountOfficer) {
         this.resolveOfficerProfileId();
       }
+
+      if (!this.isTenant) {
+        this.loadLeasesForDropdown();
+      }
     }
 
     this.route.queryParams.subscribe(params => {
@@ -65,6 +105,48 @@ export class InvoicesComponent implements OnInit {
         this.loadTenantInvoicesAutomatically();
       }
     });
+  }
+
+  loadLeasesForDropdown(): void {
+    const user = this.authService.currentUserValue;
+    if (!user) return;
+
+    this.loadingLeases = true;
+    const role = user.role.toUpperCase();
+
+    if (role === 'OWNER') {
+      this.apiService.getLeasesByOwnerUserId(user.userId).subscribe({
+        next: (data) => {
+          this.leases = data;
+          this.loadingLeases = false;
+          // Auto-select first lease if nothing searched yet
+          if (this.leases.length > 0 && !this.searchLeaseId) {
+            this.searchLeaseId = this.leases[0].leaseId.toString();
+            this.onSearchInvoices();
+          }
+        },
+        error: () => {
+          this.leases = [];
+          this.loadingLeases = false;
+        }
+      });
+    } else if (role === 'ACCOUNT OFFICER' || role === 'ADMIN') {
+      this.apiService.getAllLeases().subscribe({
+        next: (data) => {
+          this.leases = data;
+          this.loadingLeases = false;
+          // Auto-select first lease if nothing searched yet
+          if (this.leases.length > 0 && !this.searchLeaseId) {
+            this.searchLeaseId = this.leases[0].leaseId.toString();
+            this.onSearchInvoices();
+          }
+        },
+        error: () => {
+          this.leases = [];
+          this.loadingLeases = false;
+        }
+      });
+    }
   }
 
   resolveOfficerProfileId(): void {
@@ -119,6 +201,7 @@ export class InvoicesComponent implements OnInit {
           }
         });
         this.invoices = filteredInvoices;
+        this.pageInvoices = 1;
         this.loadingInvoices = false;
       },
       error: () => {
@@ -141,6 +224,7 @@ export class InvoicesComponent implements OnInit {
     this.apiService.getDefaulters().subscribe({
       next: (data) => {
         this.defaulters = data;
+        this.pageDefaulters = 1;
         this.loadingDefaulters = false;
       },
       error: () => {
@@ -159,6 +243,7 @@ export class InvoicesComponent implements OnInit {
     this.apiService.listInvoiceWithLeaseId(Number(this.searchLeaseId)).subscribe({
       next: (data) => {
         this.invoices = data;
+        this.pageInvoices = 1;
         this.loadingInvoices = false;
       },
       error: (err) => {

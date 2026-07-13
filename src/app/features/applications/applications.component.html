@@ -1,8 +1,9 @@
 <div class="animated-fade-in">
-  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div class="listings-hero-banner p-4 rounded shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3 text-white"
+       style="background: linear-gradient(rgba(9, 34, 68, 0.8), rgba(9, 34, 68, 0.9)), url('/listings_banner.jpg') no-repeat center center/cover;">
     <div>
-      <h1 class="h2 text-gradient mb-1">Leasing Applications</h1>
-      <p class="text-muted">Apply for units and review leasing applications</p>
+      <h1 class="h2 text-white fw-bold mb-1">Leasing Applications</h1>
+      <p class="mb-0 text-white-50">Apply for units and review leasing applications</p>
     </div>
     <button *ngIf="isTenant && !showApplyForm" (click)="toggleApplyForm()" class="btn btn-primary d-flex align-items-center gap-2">
       <i class="bi bi-file-earmark-plus"></i>
@@ -24,7 +25,7 @@
           <select id="appUnit" formControlName="unitId" class="form-select" [ngClass]="{ 'is-invalid': submitted && fa['unitId'].errors }">
             <option value="" disabled selected>Choose unit...</option>
             <option *ngFor="let u of availableUnits" [value]="u.unitId">
-              Unit {{ u.unitId }} - {{ u.type }} at {{ u.propertyName }} ($ {{ u.rentAmount }}/mo)
+              Unit {{ u.unitId }} - {{ u.type }} at {{ u.propertyName }} (₹ {{ u.rentAmount }}/mo)
             </option>
           </select>
           <div *ngIf="submitted && fa['unitId'].errors" class="invalid-feedback">
@@ -94,7 +95,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let app of applications">
+          <tr *ngFor="let app of paginatedApplications">
             <td><strong class="text-dark">#{{ app.applicationId }}</strong></td>
             <td>
               <div>Unit {{ app.unitId }} {{ app.type ? '(' + app.type + ')' : '' }}</div>
@@ -130,6 +131,27 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Pagination controls -->
+    <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="applications.length > pageSize">
+      <span class="text-muted small">
+        Showing {{ (page - 1) * pageSize + 1 }} to {{ min(page * pageSize, applications.length) }} of {{ applications.length }} entries
+      </span>
+      <div class="btn-group shadow-sm">
+        <button [disabled]="page === 1" (click)="page = page - 1" class="btn btn-sm btn-outline-secondary py-1 px-2.5">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        <button *ngFor="let p of getPages(applications.length)" 
+                (click)="page = p" 
+                class="btn btn-sm py-1 px-2.5"
+                [ngClass]="page === p ? 'btn-primary text-white' : 'btn-outline-secondary'">
+          {{ p }}
+        </button>
+        <button [disabled]="page === totalPages(applications.length)" (click)="page = page + 1" class="btn btn-sm btn-outline-secondary py-1 px-2.5">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
     </div>
 
     <!-- Empty state -->

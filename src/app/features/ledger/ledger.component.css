@@ -1,1 +1,26 @@
-/* Ledger styles */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  
+  .modal-overlay,
+  .modal-overlay * {
+    visibility: visible !important;
+  }
+  
+  .modal-overlay {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+  
+  .btn,
+  .btn-close,
+  .btn-group {
+    display: none !important;
+  }
+}

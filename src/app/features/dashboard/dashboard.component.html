@@ -1,13 +1,23 @@
 <div class="animated-fade-in">
   
-  <!-- Top Title Bar -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h1 class="h2 text-gradient mb-1">Workspace Overview</h1>
-      <p class="text-muted mb-0">Role: <span class="badge badge-role text-uppercase">{{ role }}</span></p>
+  <!-- Premium 99acres Style Dashboard Hero Banner -->
+  <div class="dashboard-hero-banner p-4 p-sm-5 rounded shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-4 text-white position-relative overflow-hidden"
+       style="background: linear-gradient(rgba(9, 34, 68, 0.82), rgba(9, 34, 68, 0.95)), url('/dashboard_banner.jpg') no-repeat center center/cover;">
+    
+    <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 1;">
+      <div class="d-flex align-items-center justify-content-center rounded-circle shadow text-white border border-2 border-white"
+           [style.background-color]="userAvatar.color"
+           style="width: 65px; height: 65px; font-size: 2.2rem; line-height: 1;">
+        {{ userAvatar.emoji }}
+      </div>
+      <div>
+        <h1 class="h2 fw-bold text-white mb-1">Welcome back, {{ authService.currentUserValue?.userName }}!</h1>
+        <p class="mb-0 text-white-50 small">Manage, track, and request real estate services seamlessly &bull; Role: <span class="badge bg-light text-dark text-uppercase ms-1" style="font-size: 0.7rem; padding: 0.25em 0.6em; min-width: auto !important;">{{ role }}</span></p>
+      </div>
     </div>
-    <div class="text-muted small">
-      Last login: {{ today | date:'medium' }}
+    
+    <div class="text-white-50 small bg-white bg-opacity-10 border border-white border-opacity-10 rounded px-3 py-2 shadow-sm position-relative" style="z-index: 1; backdrop-filter: blur(4px);">
+      <i class="bi bi-clock-history me-1"></i> Current Session: {{ today | date:'medium' }}
     </div>
   </div>
 
@@ -123,8 +133,8 @@
       <div class="col-md-4">
         <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/maintenance'" style="cursor: pointer;">
           <i class="bi bi-tools fs-1 text-danger mb-2"></i>
-          <h4 class="fw-bold mb-1 text-dark">File Request</h4>
-          <p class="text-muted small mb-3">Raise repair & maintenance issues</p>
+          <h4 class="fw-bold mb-1 text-dark">{{ tenantStats.maintenanceCount }}</h4>
+          <p class="text-muted small mb-3">Active Maintenance Issues</p>
           <a routerLink="/maintenance" class="btn btn-primary btn-sm mt-auto">Request Repair</a>
         </div>
       </div>

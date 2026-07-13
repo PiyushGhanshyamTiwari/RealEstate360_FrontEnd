@@ -95,6 +95,18 @@ export class ApiService {
     return this.http.put<LeaseOutputDTO>(`${this.baseUrl}/api/v1/lease/${leaseId}/${status}`, {});
   }
 
+  getAllLeases(): Observable<LeaseOutputDTO[]> {
+    return this.http.get<LeaseOutputDTO[]>(`${this.baseUrl}/api/v1/lease/all`);
+  }
+
+  getLeasesByOwnerUserId(ownerUserId: number): Observable<LeaseOutputDTO[]> {
+    return this.http.get<LeaseOutputDTO[]>(`${this.baseUrl}/api/v1/lease/ownerUserId/${ownerUserId}`);
+  }
+
+  getLeasesByTenantId(tenantId: number): Observable<LeaseOutputDTO[]> {
+    return this.http.get<LeaseOutputDTO[]>(`${this.baseUrl}/api/v1/lease/tenantId/${tenantId}`);
+  }
+
   // --- Ledger Entry Controller ---
   getLedgerEntriesByMonthAndYear(month: number, year: number): Observable<LedgerEntryOutputDto[]> {
     return this.http.get<LedgerEntryOutputDto[]>(`${this.baseUrl}/api/v1/ledger/${month}/${year}`);

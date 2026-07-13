@@ -1,8 +1,9 @@
 <div class="animated-fade-in">
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="listings-hero-banner p-4 rounded shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3 text-white"
+       style="background: linear-gradient(rgba(9, 34, 68, 0.8), rgba(9, 34, 68, 0.9)), url('/listings_banner.jpg') no-repeat center center/cover;">
     <div>
-      <h1 class="h2 text-gradient mb-1">Lease Agreements</h1>
-      <p class="text-muted">Manage active rental lease agreements and sign contracts</p>
+      <h1 class="h2 text-white fw-bold mb-1">Lease Agreements</h1>
+      <p class="mb-0 text-white-50">Manage active rental lease agreements and sign contracts</p>
     </div>
   </div>
 
@@ -82,14 +83,14 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let inv of tenantInvoices">
+              <tr *ngFor="let inv of paginatedTenantInvoices">
                 <td><strong class="text-dark">#{{ inv.invoiceId }}</strong></td>
                 <td>
                   <div class="small text-muted">From: {{ inv.periodStart | date:'mediumDate' }}</div>
                   <div class="small text-muted">To: {{ inv.periodEnd | date:'mediumDate' }}</div>
                 </td>
                 <td>{{ inv.dueDate | date:'mediumDate' }}</td>
-                <td><strong class="text-primary">$ {{ inv.amountDue }}</strong></td>
+                <td><strong class="text-primary">₹ {{ inv.amountDue }}</strong></td>
                 <td>
                   <span class="badge text-uppercase" 
                         [ngClass]="{
@@ -102,6 +103,27 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pagination controls -->
+        <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="tenantInvoices.length > pageSize">
+          <span class="text-muted small">
+            Showing {{ (page - 1) * pageSize + 1 }} to {{ min(page * pageSize, tenantInvoices.length) }} of {{ tenantInvoices.length }} entries
+          </span>
+          <div class="btn-group shadow-sm">
+            <button [disabled]="page === 1" (click)="page = page - 1" class="btn btn-sm btn-outline-secondary py-1 px-2.5">
+              <i class="bi bi-chevron-left"></i> Prev
+            </button>
+            <button *ngFor="let p of getPages(tenantInvoices.length)" 
+                    (click)="page = p" 
+                    class="btn btn-sm py-1 px-2.5"
+                    [ngClass]="page === p ? 'btn-primary text-white' : 'btn-outline-secondary'">
+              {{ p }}
+            </button>
+            <button [disabled]="page === totalPages(tenantInvoices.length)" (click)="page = page + 1" class="btn btn-sm btn-outline-secondary py-1 px-2.5">
+              Next <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
         </div>
 
         <div *ngIf="!loadingLeases && tenantInvoices.length === 0" class="text-center py-5 text-muted small">
@@ -134,9 +156,9 @@
         </div>
 
         <div *ngIf="!loadingApps && associatedApp" class="bg-light p-3 rounded border border-secondary border-opacity-10 mt-3">
-          <h6 class="fw-bold text-dark mb-2">Approved Rental Application Details</h6>
+          <h6 class="fw-bold text-primary mb-2">Approved Rental Application Details</h6>
           <table class="table table-borderless table-sm text-secondary m-0 small">
-            <tr><td>Application ID:</td><td><strong class="text-dark">#{{ associatedApp.applicationId }}</strong></td></tr>
+            <tr><td>Application ID:</td><td><strong class="text-primary">#{{ associatedApp.applicationId }}</strong></td></tr>
             <tr><td>Tenant User ID:</td><td>User #{{ associatedApp.userId }}</td></tr>
             <tr><td>Rental Period:</td><td>{{ associatedApp.startDate }} to {{ associatedApp.endDate }}</td></tr>
             <tr><td>Application Status:</td><td><span class="badge bg-success">Approved</span></td></tr>

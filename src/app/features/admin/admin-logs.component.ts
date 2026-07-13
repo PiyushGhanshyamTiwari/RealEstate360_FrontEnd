@@ -17,6 +17,33 @@ export class AdminLogsComponent implements OnInit {
   logs: AuditLogResponseDTO[] = [];
   loading = true;
 
+  // Pagination helper fields
+  page = 1;
+  pageSize = 10; // Let's set 10 page size for logs since logs are dense!
+
+  get paginatedLogs(): AuditLogResponseDTO[] {
+    const start = (this.page - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.logs.slice(start, end);
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  totalPages(totalItems: number): number {
+    return Math.ceil(totalItems / this.pageSize);
+  }
+
+  getPages(totalItems: number): number[] {
+    const total = this.totalPages(totalItems);
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
   logType = '';
   logValue = '';
 
@@ -26,9 +53,20 @@ export class AdminLogsComponent implements OnInit {
 
   loadLogs(): void {
     this.loading = true;
-    this.apiService.getAuditLogs(this.logType || undefined, this.logValue || undefined).subscribe({
+
+    let mappedType: string | undefined = undefined;
+    if (this.logType === 'userId') {
+      mappedType = 'USER';
+    } else if (this.logType === 'action') {
+      mappedType = 'ACTION';
+    } else if (this.logType === 'resourceType') {
+      mappedType = 'RESOURCE';
+    }
+
+    this.apiService.getAuditLogs(mappedType, this.logValue || undefined).subscribe({
       next: (data) => {
-        this.logs = data;
+        this.logs = data || [];
+        this.page = 1;
         this.loading = false;
       },
       error: () => {

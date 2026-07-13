@@ -22,6 +22,33 @@ export class PropertiesComponent implements OnInit {
   isOwner = false;
   userId: number | null = null;
 
+  // Pagination helper fields
+  page = 1;
+  pageSize = 4;
+
+  get paginatedProperties(): PropertyOutputDTO[] {
+    const start = (this.page - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.properties.slice(start, end);
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  totalPages(totalItems: number): number {
+    return Math.ceil(totalItems / this.pageSize);
+  }
+
+  getPages(totalItems: number): number[] {
+    const total = this.totalPages(totalItems);
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
   showRegisterForm = false;
   propertyForm!: FormGroup;
   submitted = false;
@@ -70,6 +97,7 @@ export class PropertiesComponent implements OnInit {
       this.apiService.findPropertyByOwnerId(this.userId).subscribe({
         next: (data) => {
           this.properties = data;
+          this.page = 1;
           this.loading = false;
         },
         error: () => {
@@ -99,6 +127,7 @@ export class PropertiesComponent implements OnInit {
             }
           });
           this.properties = Array.from(propertyMap.values());
+          this.page = 1;
           this.loading = false;
         },
         error: () => {
@@ -140,6 +169,7 @@ export class PropertiesComponent implements OnInit {
     this.apiService.findPropertyByCity(this.searchCity).subscribe({
       next: (data) => {
         this.properties = data;
+        this.page = 1;
         this.loading = false;
       },
       error: () => {
@@ -156,6 +186,7 @@ export class PropertiesComponent implements OnInit {
     this.apiService.findPropertyByState(this.searchState).subscribe({
       next: (data) => {
         this.properties = data;
+        this.page = 1;
         this.loading = false;
       },
       error: () => {

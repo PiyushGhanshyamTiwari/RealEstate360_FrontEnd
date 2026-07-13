@@ -23,6 +23,33 @@ export class ApplicationsComponent implements OnInit {
   availableUnits: UnitOutputDTO[] = [];
   ownerUnits: UnitOutputDTO[] = [];
   loading = true;
+
+  // Pagination helper fields
+  page = 1;
+  pageSize = 5;
+
+  get paginatedApplications(): ApplicationOutputDTO[] {
+    const start = (this.page - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.applications.slice(start, end);
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  totalPages(totalItems: number): number {
+    return Math.ceil(totalItems / this.pageSize);
+  }
+
+  getPages(totalItems: number): number[] {
+    const total = this.totalPages(totalItems);
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
   isTenant = false;
   isOwner = false;
   userId: number | null = null;
@@ -100,6 +127,7 @@ export class ApplicationsComponent implements OnInit {
     this.apiService.getApplicationByTenantId(this.userId).subscribe({
       next: (data) => {
         this.applications = data;
+        this.page = 1;
         this.loading = false;
       },
       error: () => {
@@ -115,6 +143,7 @@ export class ApplicationsComponent implements OnInit {
         this.apiService.getApplicationsByUnitId(units[0].unitId).subscribe({
           next: (data) => {
             this.applications = data;
+            this.page = 1;
             this.loading = false;
           },
           error: () => {
@@ -131,10 +160,11 @@ export class ApplicationsComponent implements OnInit {
     if (!this.ownerSelectedUnitId) return;
     this.loading = true;
     this.apiService.getApplicationsByUnitId(Number(this.ownerSelectedUnitId)).subscribe({
-      next: (data) => {
-        this.applications = data;
-        this.loading = false;
-      },
+        next: (data) => {
+          this.applications = data;
+          this.page = 1;
+          this.loading = false;
+        },
       error: () => {
         this.applications = [];
         this.loading = false;

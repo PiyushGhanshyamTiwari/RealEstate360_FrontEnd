@@ -22,6 +22,33 @@ export class MaintenanceComponent implements OnInit {
   technicians: TechnicianOutputDTO[] = [];
   logs: MaintenanceLogResponseDTO[] = [];
 
+  // Pagination helper fields
+  page = 1;
+  pageSize = 5;
+
+  get paginatedSchedules(): MaintenanceScheduleResponseDTO[] {
+    const start = (this.page - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.schedules.slice(start, end);
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  totalPages(totalItems: number): number {
+    return Math.ceil(totalItems / this.pageSize);
+  }
+
+  getPages(totalItems: number): number[] {
+    const total = this.totalPages(totalItems);
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
   loading = true;
   loadingLogs = false;
   isTenant = false;
@@ -118,6 +145,7 @@ export class MaintenanceComponent implements OnInit {
       this.apiService.getAllSchedules(this.filterStatus || undefined, this.filterSeverity || undefined).subscribe({
         next: (data) => {
           this.schedules = data;
+          this.page = 1;
           this.loading = false;
         },
         error: () => {
@@ -129,6 +157,7 @@ export class MaintenanceComponent implements OnInit {
       this.apiService.getTechnicianSchedules(this.userId).subscribe({
         next: (data) => {
           this.schedules = data;
+          this.page = 1;
           this.loading = false;
         },
         error: () => {
@@ -137,8 +166,19 @@ export class MaintenanceComponent implements OnInit {
         }
       });
     } else if (this.isTenant && this.userId) {
-      this.schedules = [];
-      this.loading = false;
+      this.apiService.getAllSchedules(this.filterStatus || undefined, this.filterSeverity || undefined).subscribe({
+        next: (data) => {
+          this.schedules = data.filter(s => s.userId === this.userId);
+          this.page = 1;
+          this.loading = false;
+        },
+        error: () => {
+          const stored = localStorage.getItem(`re360_schedules_tenant_${this.userId}`);
+          this.schedules = stored ? JSON.parse(stored) : [];
+          this.page = 1;
+          this.loading = false;
+        }
+      });
     } else {
       this.loading = false;
     }
@@ -163,9 +203,14 @@ export class MaintenanceComponent implements OnInit {
     };
 
     this.apiService.createScheduleByTenant(input).subscribe({
-      next: () => {
+      next: (res) => {
         this.submitting = false;
         this.successMessage = 'Maintenance issue successfully reported to management!';
+        
+        // Add to local list and save to localStorage
+        this.schedules.unshift(res);
+        localStorage.setItem(`re360_schedules_tenant_${this.userId}`, JSON.stringify(this.schedules));
+
         this.toggleTenantForm();
       },
       error: (err) => {
@@ -179,6 +224,20 @@ export class MaintenanceComponent implements OnInit {
     this.selectedSchedule = schedule;
     this.loadingLogs = true;
     this.logs = [];
+
+    // Sync latest status/severity from backend
+    this.apiService.getScheduleById(schedule.scheduleId).subscribe({
+      next: (updated) => {
+        this.selectedSchedule = updated;
+        const idx = this.schedules.findIndex(s => s.scheduleId === schedule.scheduleId);
+        if (idx !== -1) {
+          this.schedules[idx] = updated;
+          if (this.isTenant && this.userId) {
+            localStorage.setItem(`re360_schedules_tenant_${this.userId}`, JSON.stringify(this.schedules));
+          }
+        }
+      }
+    });
 
     this.apiService.getLogsByScheduleId(schedule.scheduleId).subscribe({
       next: (page) => {

@@ -80,7 +80,7 @@
       </div>
 
       <!-- Password -->
-      <div class="mb-4">
+      <div class="mb-3">
         <label for="password" class="form-label">Password</label>
         <input
           type="password"
@@ -93,6 +93,22 @@
           <span *ngIf="f['password'].errors['required']">Password is required.</span>
           <span *ngIf="f['password'].errors['minlength']">Password must be at least 5 characters.</span>
           <span *ngIf="f['password'].errors['maxlength']">Password cannot exceed 20 characters.</span>
+        </div>
+      </div>
+
+      <!-- Avatar Picker -->
+      <div class="mb-4">
+        <label class="form-label d-block text-secondary small fw-bold">Select Profile Avatar</label>
+        <div class="d-flex flex-wrap gap-2 justify-content-between p-2 bg-white rounded border border-secondary border-opacity-15">
+          <button type="button" *ngFor="let opt of avatarOptions"
+                  (click)="selectAvatar(opt.id)"
+                  class="btn p-0 rounded-circle d-flex align-items-center justify-content-center cursor-pointer avatar-option-bubble"
+                  [style.background-color]="opt.color"
+                  [ngClass]="{'active-avatar shadow': selectedAvatar === opt.id}"
+                  style="width: 42px; height: 42px; font-size: 1.4rem; transition: all 0.25s;"
+                  [title]="opt.label">
+            {{ opt.emoji }}
+          </button>
         </div>
       </div>
 

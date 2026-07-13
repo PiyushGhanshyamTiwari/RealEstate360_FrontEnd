@@ -44,6 +44,33 @@ export class LeasesComponent implements OnInit {
   tenantInvoices: InvoiceOutputDTO[] = [];
   loadingLeases = false;
 
+  // Pagination helper fields
+  page = 1;
+  pageSize = 5;
+
+  get paginatedTenantInvoices(): InvoiceOutputDTO[] {
+    const start = (this.page - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return this.tenantInvoices.slice(start, end);
+  }
+
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  totalPages(totalItems: number): number {
+    return Math.ceil(totalItems / this.pageSize);
+  }
+
+  getPages(totalItems: number): number[] {
+    const total = this.totalPages(totalItems);
+    const pages = [];
+    for (let i = 1; i <= total; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }
+
   leaseForm!: FormGroup;
   submitted = false;
   submitting = false;
@@ -139,6 +166,7 @@ export class LeasesComponent implements OnInit {
             if (isMine) {
               matchingLeaseId = leaseId;
               this.tenantInvoices = invoices;
+              this.page = 1;
               this.tenantLease = {
                 leaseId: leaseId,
                 tenantId: firstInv.tenantId,

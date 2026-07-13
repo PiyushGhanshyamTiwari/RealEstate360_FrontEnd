@@ -1,8 +1,24 @@
 .register-page {
-  background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+  background: linear-gradient(rgba(9, 34, 68, 0.78), rgba(9, 34, 68, 0.85)), url('/login_bg.jpg') no-repeat center center/cover !important;
   min-height: 100vh;
 }
-
 .register-card {
   max-width: 520px;
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(9, 34, 68, 0.25) !important;
+}
+
+.avatar-option-bubble {
+  border: 3px solid transparent !important;
+}
+
+.avatar-option-bubble:hover {
+  transform: scale(1.15);
+}
+
+.avatar-option-bubble.active-avatar {
+  border-color: var(--primary-color) !important;
+  transform: scale(1.22);
 }
