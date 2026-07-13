@@ -1,0 +1,199 @@
+import { Component, inject, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { ApplicationInputDTO, ApplicationOutputDTO, UnitOutputDTO } from '../../core/models/models';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-applications',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  templateUrl: './applications.component.html',
+  styleUrl: './applications.component.css'
+})
+export class ApplicationsComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private apiService = inject(ApiService);
+  private route = inject(ActivatedRoute);
+  authService = inject(AuthService);
+
+  applications: ApplicationOutputDTO[] = [];
+  availableUnits: UnitOutputDTO[] = [];
+  ownerUnits: UnitOutputDTO[] = [];
+  loading = true;
+  isTenant = false;
+  isOwner = false;
+  userId: number | null = null;
+
+  showApplyForm = false;
+  applyForm!: FormGroup;
+  submitted = false;
+  submitting = false;
+  errorMessage = '';
+  successMessage = '';
+
+  ownerSelectedUnitId = '';
+
+  ngOnInit(): void {
+    const user = this.authService.currentUserValue;
+    if (user) {
+      this.userId = user.userId;
+      this.isTenant = user.role.toUpperCase() === 'TENANT';
+      this.isOwner = user.role.toUpperCase() === 'OWNER';
+    }
+
+    this.applyForm = this.fb.group({
+      unitId: ['', Validators.required],
+      startDate: ['', Validators.required],
+      endDate: ['', Validators.required]
+    });
+
+    const prefilledUnitId = this.route.snapshot.queryParams['applyUnitId'];
+    if (prefilledUnitId) {
+      this.showApplyForm = true;
+      this.applyForm.patchValue({ unitId: Number(prefilledUnitId) });
+    }
+
+    if (this.isTenant) {
+      this.loadTenantApplications();
+      this.loadAvailableUnits();
+    } else if (this.isOwner) {
+      this.loadOwnerUnits();
+    } else {
+      this.loadAllApplications();
+    }
+  }
+
+  get fa() { return this.applyForm.controls; }
+
+  toggleApplyForm(): void {
+    this.showApplyForm = !this.showApplyForm;
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.submitted = false;
+    if (!this.showApplyForm) {
+      this.loadTenantApplications();
+    }
+  }
+
+  loadAvailableUnits(): void {
+    this.apiService.filterUnits(undefined, undefined, undefined, undefined, undefined, undefined, 'AVAILABLE').subscribe(data => {
+      this.availableUnits = data;
+    });
+  }
+
+  loadOwnerUnits(): void {
+    if (!this.userId) return;
+    this.apiService.findPropertyByOwnerId(this.userId).subscribe(properties => {
+      this.apiService.getAllUnits().subscribe(units => {
+        this.ownerUnits = units.filter(u => properties.some(p => p.propertyId === u.propertyId));
+        this.loading = false;
+      });
+    });
+  }
+
+  loadTenantApplications(): void {
+    if (!this.userId) return;
+    this.loading = true;
+    this.apiService.getApplicationByTenantId(this.userId).subscribe({
+      next: (data) => {
+        this.applications = data;
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+      }
+    });
+  }
+
+  loadAllApplications(): void {
+    this.loading = true;
+    this.apiService.getAllUnits().subscribe(units => {
+      if (units.length > 0) {
+        this.apiService.getApplicationsByUnitId(units[0].unitId).subscribe({
+          next: (data) => {
+            this.applications = data;
+            this.loading = false;
+          },
+          error: () => {
+            this.loading = false;
+          }
+        });
+      } else {
+        this.loading = false;
+      }
+    });
+  }
+
+  loadOwnerApplications(): void {
+    if (!this.ownerSelectedUnitId) return;
+    this.loading = true;
+    this.apiService.getApplicationsByUnitId(Number(this.ownerSelectedUnitId)).subscribe({
+      next: (data) => {
+        this.applications = data;
+        this.loading = false;
+      },
+      error: () => {
+        this.applications = [];
+        this.loading = false;
+      }
+    });
+  }
+
+  onApplySubmit(): void {
+    this.submitted = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    if (this.applyForm.invalid || !this.userId) {
+      return;
+    }
+
+    this.submitting = true;
+    const formValue = this.applyForm.value;
+    const input: ApplicationInputDTO = {
+      unitId: Number(formValue.unitId),
+      userId: this.userId,
+      startDate: formValue.startDate,
+      endDate: formValue.endDate
+    };
+
+    this.apiService.submitApplication(input).subscribe({
+      next: () => {
+        this.submitting = false;
+        this.successMessage = 'Lease application successfully submitted!';
+        this.applyForm.reset();
+        this.submitted = false;
+      },
+      error: (err) => {
+        this.submitting = false;
+        this.errorMessage = err.error?.message || 'Failed to submit application. Make sure the unit is AVAILABLE.';
+      }
+    });
+  }
+
+  onUpdateStatus(applicationId: number, status: string): void {
+    this.loading = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    this.apiService.updateStatusOfApplication(applicationId, status).subscribe({
+      next: () => {
+        this.successMessage = `Application successfully updated to ${status}!`;
+        setTimeout(() => this.successMessage = '', 3000);
+        if (this.isOwner) {
+          this.loadOwnerApplications();
+        } else {
+          this.loadAllApplications();
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.errorMessage = err.error?.message || 'Failed to update application status.';
+        setTimeout(() => this.errorMessage = '', 3000);
+      }
+    });
+  }
+}

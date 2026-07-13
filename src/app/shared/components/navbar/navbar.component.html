@@ -1,0 +1,47 @@
+<nav class="navbar navbar-expand glass-nav px-4 py-2">
+  <div class="container-fluid justify-content-between">
+    <span class="navbar-brand mb-0 h1 fs-5 fw-semibold d-flex align-items-center gap-2">
+      <i class="bi bi-shield-check text-primary"></i>
+      <span class="brand-text">Portal Workspace</span>
+    </span>
+
+    <div class="d-flex align-items-center gap-3">
+      <div class="d-none d-md-flex flex-column text-end">
+        <span class="nav-username fw-medium text-capitalize" style="font-size: 0.85rem;">
+          {{ authService.currentUserValue?.userName }}
+        </span>
+        <span class="text-muted" style="font-size: 0.75rem;">
+          {{ authService.currentUserValue?.emailId }}
+        </span>
+      </div>
+
+      <div class="dropdown">
+        <button
+          class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2 py-1 px-3"
+          type="button"
+          id="profileDropdown"
+          data-bs-toggle="dropdown"
+          aria-expanded="false">
+          <i class="bi bi-person-circle fs-6"></i>
+          <span class="d-none d-sm-inline">Account</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg mt-2 nav-dropdown"
+            aria-labelledby="profileDropdown">
+          <li>
+            <a class="dropdown-item py-2 d-flex align-items-center gap-2" routerLink="/profile-setup">
+              <i class="bi bi-gear-fill text-primary"></i>
+              <span>Profile Configuration</span>
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <button class="dropdown-item py-2 text-danger d-flex align-items-center gap-2" (click)="onLogout()">
+              <i class="bi bi-box-arrow-right"></i>
+              <span>Sign Out</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>

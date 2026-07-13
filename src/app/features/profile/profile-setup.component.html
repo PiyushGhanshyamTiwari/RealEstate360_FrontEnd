@@ -1,0 +1,241 @@
+<div class="animated-fade-in max-width-profile mx-auto">
+  <div class="mb-4">
+    <h1 class="h2 text-gradient mb-1">Account Profile Setup</h1>
+    <p class="text-muted">Configure and view your professional credentials and account details</p>
+  </div>
+
+  <!-- ERROR / SUCCESS ALERTS -->
+  <div *ngIf="errorMessage" class="alert alert-danger py-2 mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+  <div *ngIf="successMessage" class="alert alert-success py-2 mb-4">
+    <i class="bi bi-check-circle-fill me-2"></i>
+    <span>{{ successMessage }}</span>
+  </div>
+
+  <!-- Existing Profile Details view -->
+  <div *ngIf="existingProfile && !isEditing" class="card glass-panel p-4 mb-4">
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4" style="width: 60px; height: 60px;">
+        {{ initials }}
+      </div>
+      <div>
+        <h4 class="fw-bold mb-0 text-dark">{{ authService.currentUserValue?.userName }}</h4>
+        <span class="badge badge-role text-uppercase mt-1">{{ role }}</span>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-sm-6">
+        <span class="text-muted d-block small">Email Address</span>
+        <span class="text-dark">{{ authService.currentUserValue?.emailId }}</span>
+      </div>
+      <div class="col-sm-6">
+        <span class="text-muted d-block small">Phone Number</span>
+        <span class="text-dark">{{ authService.currentUserValue?.phone }}</span>
+      </div>
+
+      <!-- Dynamic details based on role -->
+      <ng-container *ngIf="role === 'TENANT'">
+        <div class="col-12">
+          <span class="text-muted d-block small">Address</span>
+          <span class="text-dark">{{ existingProfile.address }}</span>
+        </div>
+        <div class="col-sm-6">
+          <span class="text-muted d-block small">Verification Document</span>
+          <span class="badge bg-secondary text-uppercase">{{ existingProfile.documentType }}</span>
+        </div>
+        <div class="col-sm-6">
+          <span class="text-muted d-block small">Document File Reference</span>
+          <span class="text-secondary text-truncate d-block">{{ existingProfile.documentFileRef }}</span>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="role === 'TECHNICIAN'">
+        <div class="col-sm-6">
+          <span class="text-muted d-block small">Specialization</span>
+          <span class="badge bg-success text-uppercase">{{ existingProfile.specialization }}</span>
+        </div>
+        <div class="col-sm-6">
+          <span class="text-muted d-block small">City of Operation</span>
+          <span class="text-dark">{{ existingProfile.city }}</span>
+        </div>
+        <div class="col-sm-6">
+          <span class="text-muted d-block small">Hired On</span>
+          <span class="text-dark">{{ existingProfile.hireDate | date:'mediumDate' }}</span>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="role === 'ACCOUNT OFFICER'">
+        <div class="col-12">
+          <span class="text-muted d-block small">Office Full Name</span>
+          <span class="text-dark">{{ existingProfile.fullName }}</span>
+        </div>
+        <div class="col-12">
+          <span class="text-muted d-block small">Office Location Address</span>
+          <span class="text-dark">{{ existingProfile.address }}</span>
+        </div>
+      </ng-container>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4 border-top border-secondary border-opacity-10 pt-3">
+      <!-- Edit button for roles with sub-profiles -->
+      <button *ngIf="hasSubProfile" (click)="editProfile()" class="btn btn-outline-warning btn-sm d-flex align-items-center gap-2">
+        <i class="bi bi-pencil-square"></i>
+        <span>Edit Profile Details</span>
+      </button>
+      
+      <!-- Edit button for general account details -->
+      <button (click)="editAccount()" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+        <i class="bi bi-person-gear"></i>
+        <span>Edit Account Info</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Profile Setup / Edit Forms -->
+  <div *ngIf="(!existingProfile && !loadingProfile) || isEditing" class="card glass-panel p-4 p-sm-5">
+    
+    <!-- BASE ACCOUNT UPDATE FORM (ADMIN, OWNER or general edit) -->
+    <form *ngIf="editMode === 'ACCOUNT'" [formGroup]="userForm" (ngSubmit)="onAccountSubmit()">
+      <h4 class="fw-bold mb-3 text-gradient">Update Account Credentials</h4>
+      
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label for="usrName" class="form-label">Full User Name</label>
+          <input type="text" id="usrName" formControlName="userName" class="form-control" [ngClass]="{ 'is-invalid': submitted && fu['userName'].errors }">
+          <div *ngIf="submitted && fu['userName'].errors" class="invalid-feedback">Name is required.</div>
+        </div>
+        <div class="col-sm-6">
+          <label for="usrEmail" class="form-label">Email Address</label>
+          <input type="email" id="usrEmail" formControlName="emailId" class="form-control" [ngClass]="{ 'is-invalid': submitted && fu['emailId'].errors }">
+          <div *ngIf="submitted && fu['emailId'].errors" class="invalid-feedback">Valid email is required.</div>
+        </div>
+        <div class="col-sm-6">
+          <label for="usrPhone" class="form-label">Phone Number</label>
+          <input type="text" id="usrPhone" formControlName="phone" class="form-control" [ngClass]="{ 'is-invalid': submitted && fu['phone'].errors }">
+          <div *ngIf="submitted && fu['phone'].errors" class="invalid-feedback">Phone is required.</div>
+        </div>
+        <div class="col-sm-6">
+          <label for="usrPass" class="form-label">New Password (Leave blank to keep same)</label>
+          <input type="password" id="usrPass" formControlName="password" class="form-control" placeholder="••••••••" [ngClass]="{ 'is-invalid': submitted && fu['password'].errors }">
+          <div *ngIf="submitted && fu['password'].errors" class="invalid-feedback">Password must be at least 4 characters.</div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" *ngIf="existingProfile" (click)="cancelEdit()" class="btn btn-secondary py-2 px-4">Cancel</button>
+        <button type="submit" [disabled]="submitting" class="btn btn-primary py-2 px-4">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+          <span>Save Account Info</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- TENANT PROFILE FORM -->
+    <form *ngIf="editMode === 'PROFILE' && role === 'TENANT'" [formGroup]="tenantForm" (ngSubmit)="onTenantSubmit()">
+      <h4 class="fw-bold mb-3 text-gradient">Tenant Profile Details</h4>
+      <div class="mb-3">
+        <label for="tenantAddress" class="form-label">Residential Address</label>
+        <textarea id="tenantAddress" formControlName="address" class="form-control" rows="3" placeholder="Enter full postal address" [ngClass]="{ 'is-invalid': submitted && ft['address'].errors }"></textarea>
+        <div *ngIf="submitted && ft['address'].errors" class="invalid-feedback">
+          Address cannot be blank.
+        </div>
+      </div>
+      <div class="row mb-4">
+        <div class="col-sm-6">
+          <label for="docType" class="form-label">Identification Document Type</label>
+          <select id="docType" formControlName="documentType" class="form-select" [ngClass]="{ 'is-invalid': submitted && ft['documentType'].errors }">
+            <option value="" disabled selected>Select document...</option>
+            <option value="AADHAAR">Aadhaar Card</option>
+            <option value="PAN">PAN Card</option>
+            <option value="VoterId">Voter ID Card</option>
+          </select>
+          <div *ngIf="submitted && ft['documentType'].errors" class="invalid-feedback">
+            Document type is required.
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <label for="docFile" class="form-label">Upload File Copy</label>
+          <input type="file" id="docFile" (change)="onFileSelected($event)" class="form-control" [ngClass]="{ 'is-invalid': submitted && !selectedFile }">
+          <div *ngIf="submitted && !selectedFile" class="invalid-feedback">
+            Please upload document copy file.
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" *ngIf="existingProfile" (click)="cancelEdit()" class="btn btn-secondary py-2 px-4">Cancel</button>
+        <button type="submit" [disabled]="submitting" class="btn btn-primary py-2 px-4">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+          <span>Save Tenant Profile</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- MANDATORY TECHNICIAN PROFILE FORM -->
+    <form *ngIf="editMode === 'PROFILE' && role === 'TECHNICIAN'" [formGroup]="technicianForm" (ngSubmit)="onTechnicianSubmit()">
+      <h4 class="fw-bold mb-3 text-gradient">Technician Profile Details</h4>
+      <div class="row mb-4">
+        <div class="col-sm-6 mb-3 mb-sm-0">
+          <label for="spec" class="form-label">Job Specialization</label>
+          <select id="spec" formControlName="specialization" class="form-select" [ngClass]="{ 'is-invalid': submitted && ftech['specialization'].errors }">
+            <option value="" disabled selected>Select specialization...</option>
+            <option value="ELECTRICIAN">Electrician</option>
+            <option value="PLUMBER">Plumber</option>
+            <option value="HOUSE_CLEANER">House Cleaner</option>
+            <option value="PAINTER">Painter</option>
+            <option value="CARPENTER">Carpenter</option>
+          </select>
+          <div *ngIf="submitted && ftech['specialization'].errors" class="invalid-feedback">
+            Specialization is required.
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <label for="city" class="form-label">City of Operations</label>
+          <input type="text" id="city" formControlName="city" class="form-control" placeholder="e.g. Bangalore" [ngClass]="{ 'is-invalid': submitted && ftech['city'].errors }">
+          <div *ngIf="submitted && ftech['city'].errors" class="invalid-feedback">
+            City name is required.
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" *ngIf="existingProfile" (click)="cancelEdit()" class="btn btn-secondary py-2 px-4">Cancel</button>
+        <button type="submit" [disabled]="submitting" class="btn btn-primary py-2 px-4">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+          <span>Save Technician Profile</span>
+        </button>
+      </div>
+    </form>
+
+    <!-- ACCOUNT OFFICER PROFILE FORM -->
+    <form *ngIf="editMode === 'PROFILE' && role === 'ACCOUNT OFFICER'" [formGroup]="officerForm" (ngSubmit)="onOfficerSubmit()">
+      <h4 class="fw-bold mb-3 text-gradient">Account Officer Profile Details</h4>
+      <div class="mb-3">
+        <label for="fullName" class="form-label">Full Name</label>
+        <input type="text" id="fullName" formControlName="fullName" class="form-control" placeholder="Enter full name" [ngClass]="{ 'is-invalid': submitted && fo['fullName'].errors }">
+        <div *ngIf="submitted && fo['fullName'].errors" class="invalid-feedback">
+          Full name is required.
+        </div>
+      </div>
+      <div class="mb-4">
+        <label for="offAddress" class="form-label">Office Address</label>
+        <textarea id="offAddress" formControlName="address" class="form-control" rows="3" placeholder="Enter office building address" [ngClass]="{ 'is-invalid': submitted && fo['address'].errors }"></textarea>
+        <div *ngIf="submitted && fo['address'].errors" class="invalid-feedback">
+          Office address is required.
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" *ngIf="existingProfile" (click)="cancelEdit()" class="btn btn-secondary py-2 px-4">Cancel</button>
+        <button type="submit" [disabled]="submitting" class="btn btn-primary py-2 px-4">
+          <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+          <span>Save Officer Profile</span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>

@@ -1,0 +1,84 @@
+<div class="animated-fade-in">
+  <div class="mb-4">
+    <h1 class="h2 text-gradient mb-1">System Audit Trail</h1>
+    <p class="text-muted">Monitor application security events, user operations, and resource modifications</p>
+  </div>
+
+  <!-- Filters Panel -->
+  <div class="card glass-panel p-4 mb-4">
+    <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-funnel me-2 text-primary"></i>Filter Audit Trail</h5>
+    
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4 col-sm-6">
+        <label class="form-label">Log Filter Type</label>
+        <select [(ngModel)]="logType" class="form-select">
+          <option value="">No Filter</option>
+          <option value="action">Filter by Action</option>
+          <option value="resourceType">Filter by Resource Type</option>
+          <option value="userId">Filter by User ID</option>
+        </select>
+      </div>
+      <div class="col-md-4 col-sm-6">
+        <label class="form-label">Filter Value</label>
+        <input type="text" [(ngModel)]="logValue" class="form-control" placeholder="Enter keyword or ID...">
+      </div>
+      <div class="col-md-4">
+        <div class="d-flex gap-2">
+          <button (click)="resetFilters()" class="btn btn-secondary w-50 py-2">Reset</button>
+          <button (click)="loadLogs()" class="btn btn-primary w-50 py-2">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logs Grid -->
+  <div class="card glass-panel p-4">
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2">Loading audit logs...</p>
+    </div>
+
+    <div *ngIf="!loading && logs.length > 0" class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Log ID</th>
+            <th>User ID</th>
+            <th>Operation Action</th>
+            <th>Resource Type</th>
+            <th>Resource ID</th>
+            <th>Details</th>
+            <th>Status</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let lg of logs">
+            <td><strong class="text-dark">#{{ lg.auditId }}</strong></td>
+            <td>
+              <span *ngIf="lg.userId" class="badge bg-light border border-secondary border-opacity-15 text-muted">User #{{ lg.userId }}</span>
+              <span *ngIf="!lg.userId" class="text-muted small">Anonymous</span>
+            </td>
+            <td><strong class="text-dark">{{ lg.action }}</strong></td>
+            <td>{{ lg.resourceType }}</td>
+            <td>{{ lg.resourceId }}</td>
+            <td style="max-width: 250px;" class="text-truncate" [title]="lg.details">{{ lg.details }}</td>
+            <td>
+              <span class="badge" [ngClass]="lg.status === 'SUCCESS' ? 'bg-success bg-opacity-15 text-success' : 'bg-danger bg-opacity-15 text-danger'">
+                {{ lg.status }}
+              </span>
+            </td>
+            <td>{{ lg.timestamp | date:'medium' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && logs.length === 0" class="text-center py-5">
+      <i class="bi bi-shield-check text-muted fs-1 mb-2"></i>
+      <h5 class="fw-bold text-dark">No Audit Events</h5>
+      <p class="text-muted small">No security log events found.</p>
+    </div>
+  </div>
+</div>

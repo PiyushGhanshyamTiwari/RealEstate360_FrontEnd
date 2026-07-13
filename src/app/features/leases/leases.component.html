@@ -1,0 +1,188 @@
+<div class="animated-fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 text-gradient mb-1">Lease Agreements</h1>
+      <p class="text-muted">Manage active rental lease agreements and sign contracts</p>
+    </div>
+  </div>
+
+  <!-- ERROR / SUCCESS ALERTS -->
+  <div *ngIf="errorMessage" class="alert alert-danger py-2 mb-3">{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="alert alert-success py-2 mb-3">{{ successMessage }}</div>
+
+  <!-- ================== TENANT VIEW ================== -->
+  <div *ngIf="isTenant" class="row g-4">
+    <div class="col-md-5">
+      <div class="card glass-panel p-4 h-100">
+        <h4 class="fw-bold mb-3 text-gradient"><i class="bi bi-file-earmark-text me-2"></i>My Associated Lease</h4>
+        
+        <div *ngIf="loadingLeases" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="text-muted mt-2">Loading lease contract...</p>
+        </div>
+
+        <div *ngIf="!loadingLeases && tenantLease" class="d-flex flex-column gap-3">
+          <div class="bg-light p-3 rounded border border-secondary border-opacity-10">
+            <span class="text-muted d-block small">Lease Reference ID</span>
+            <h4 class="fw-bold text-dark mb-0">#{{ tenantLease.leaseId }}</h4>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <span class="text-muted d-block small">Tenant Profile ID</span>
+              <span class="text-dark fw-bold">Tenant #{{ tenantLease.tenantId }}</span>
+            </div>
+            <div class="col-sm-6">
+              <span class="text-muted d-block small">Contract Status</span>
+              <span class="badge text-uppercase" 
+                    [ngClass]="{
+                      'bg-warning text-dark': tenantLease.status === 'Review',
+                      'bg-success': tenantLease.status === 'Agreed',
+                      'bg-danger': tenantLease.status === 'Cancelled'
+                    }">
+                {{ tenantLease.status }}
+              </span>
+            </div>
+            <div class="col-sm-6">
+              <span class="text-muted d-block small">Start Date</span>
+              <span class="text-dark">{{ tenantLease.startDate | date:'mediumDate' }}</span>
+            </div>
+            <div class="col-sm-6">
+              <span class="text-muted d-block small">End Date</span>
+              <span class="text-dark">{{ tenantLease.endDate | date:'mediumDate' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="!loadingLeases && !tenantLease" class="text-center py-5">
+          <i class="bi bi-file-earmark-lock text-muted fs-1 mb-2"></i>
+          <h5 class="fw-bold text-dark">No Leases Found</h5>
+          <p class="text-muted small mb-0">No active lease agreements found for your tenant profile.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-7">
+      <div class="card glass-panel p-4 h-100">
+        <h4 class="fw-bold mb-3 text-gradient"><i class="bi bi-receipt me-2"></i>Lease Invoices</h4>
+
+        <div *ngIf="loadingLeases" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+
+        <div *ngIf="!loadingLeases && tenantInvoices.length > 0" class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Invoice ID</th>
+                <th>Billing Period</th>
+                <th>Due Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let inv of tenantInvoices">
+                <td><strong class="text-dark">#{{ inv.invoiceId }}</strong></td>
+                <td>
+                  <div class="small text-muted">From: {{ inv.periodStart | date:'mediumDate' }}</div>
+                  <div class="small text-muted">To: {{ inv.periodEnd | date:'mediumDate' }}</div>
+                </td>
+                <td>{{ inv.dueDate | date:'mediumDate' }}</td>
+                <td><strong class="text-primary">$ {{ inv.amountDue }}</strong></td>
+                <td>
+                  <span class="badge text-uppercase" 
+                        [ngClass]="{
+                          'bg-warning text-dark': inv.status === 'PENDING' || inv.status === 'OVERDUE',
+                          'bg-success': inv.status === 'PAID'
+                        }">
+                    {{ inv.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="!loadingLeases && tenantInvoices.length === 0" class="text-center py-5 text-muted small">
+          No invoices generated for this lease.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================== OWNER VIEW ================== -->
+  <div *ngIf="isOwner" class="row g-4">
+    <!-- SELECT UNIT DROPDOWN -->
+    <div class="col-md-6">
+      <div class="card glass-panel p-4 h-100">
+        <h4 class="fw-bold mb-3 text-gradient"><i class="bi bi-houses me-2"></i>Load Lease by Unit</h4>
+        
+        <div class="mb-3">
+          <label for="ownerUnitSelect" class="form-label">Select Registered Unit</label>
+          <select id="ownerUnitSelect" [(ngModel)]="selectedUnitId" (change)="onUnitSelectChange()" class="form-select">
+            <option value="" disabled selected>Select unit...</option>
+            <option *ngFor="let u of ownerUnits" [value]="u.unitId">
+              Unit #{{ u.unitId }} - {{ u.type }} ({{ u.propertyName }} - {{ u.propertyCity }}) - [Status: {{ u.status }}]
+            </option>
+          </select>
+        </div>
+
+        <!-- Associated Approved Application Info -->
+        <div *ngIf="loadingApps" class="text-center py-3">
+          <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        </div>
+
+        <div *ngIf="!loadingApps && associatedApp" class="bg-light p-3 rounded border border-secondary border-opacity-10 mt-3">
+          <h6 class="fw-bold text-dark mb-2">Approved Rental Application Details</h6>
+          <table class="table table-borderless table-sm text-secondary m-0 small">
+            <tr><td>Application ID:</td><td><strong class="text-dark">#{{ associatedApp.applicationId }}</strong></td></tr>
+            <tr><td>Tenant User ID:</td><td>User #{{ associatedApp.userId }}</td></tr>
+            <tr><td>Rental Period:</td><td>{{ associatedApp.startDate }} to {{ associatedApp.endDate }}</td></tr>
+            <tr><td>Application Status:</td><td><span class="badge bg-success">Approved</span></td></tr>
+          </table>
+          <div class="mt-2 text-warning small"><i class="bi bi-info-circle me-1"></i>A lease was automatically created in <strong>Review</strong>. Use the form next to this panel to Agree/Sign this contract.</div>
+        </div>
+
+        <div *ngIf="!loadingApps && selectedUnitId && !associatedApp" class="alert alert-warning py-2 mt-3 small">
+          No approved leasing application found for this unit.
+        </div>
+      </div>
+    </div>
+
+    <!-- LEASE UPDATE FORM -->
+    <div class="col-md-6">
+      <div class="card glass-panel p-4 h-100">
+        <h4 class="fw-bold mb-3 text-gradient"><i class="bi bi-pencil-square me-2"></i>Sign / Update Contract</h4>
+        <p class="text-muted small">Select unit first. If an approved application exists, the Lease ID defaults to the Application ID value.</p>
+        
+        <form [formGroup]="leaseForm" (ngSubmit)="onSubmit()">
+          <div class="mb-3">
+            <label for="leaseId" class="form-label">Lease Agreement ID</label>
+            <input type="number" id="leaseId" formControlName="leaseId" class="form-control" placeholder="Enter Lease ID" [ngClass]="{ 'is-invalid': submitted && f['leaseId'].errors }">
+            <div *ngIf="submitted && f['leaseId'].errors" class="invalid-feedback">
+              Lease ID is required.
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="status" class="form-label">Lease Status</label>
+            <select id="status" formControlName="status" class="form-select" [ngClass]="{ 'is-invalid': submitted && f['status'].errors }">
+              <option value="" disabled selected>Select status...</option>
+              <option value="Agreed">Agreed / Sign Contract</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+            <div *ngIf="submitted && f['status'].errors" class="invalid-feedback">
+              Please select a status.
+            </div>
+          </div>
+
+          <button type="submit" [disabled]="submitting" class="btn btn-primary w-100 py-2.5">
+            <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+            <span>Update Lease Agreement</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

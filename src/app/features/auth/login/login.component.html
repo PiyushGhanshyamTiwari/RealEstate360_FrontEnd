@@ -1,0 +1,76 @@
+<div class="login-page d-flex align-items-center justify-content-center min-vh-100 px-3">
+  <div class="card glass-panel p-4 p-sm-5 w-100 animated-fade-in login-card">
+
+    <div class="text-center mb-4">
+      <i class="bi bi-building-fill fs-1 text-gradient mb-2 d-block"></i>
+      <h2 class="fw-bold mb-1">Welcome Back</h2>
+      <p class="text-muted small">Sign in to manage your real estate assets</p>
+    </div>
+
+    <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center gap-2 py-2" role="alert">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span style="font-size: 0.85rem;">{{ errorMessage }}</span>
+    </div>
+
+    <div *ngIf="sessionExpired" class="alert alert-warning d-flex align-items-center gap-2 py-2" role="alert">
+      <i class="bi bi-clock-history"></i>
+      <span style="font-size: 0.85rem;">Your session has expired. Please sign in again.</span>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <!-- Email Input -->
+      <div class="mb-3">
+        <label for="email" class="form-label">Email Address</label>
+        <div class="input-group">
+          <span class="input-group-text login-input-addon"><i class="bi bi-envelope"></i></span>
+          <input
+            type="email"
+            id="email"
+            formControlName="emailId"
+            class="form-control"
+            placeholder="name@example.com"
+            [ngClass]="{ 'is-invalid': submitted && f['emailId'].errors }">
+        </div>
+        <div *ngIf="submitted && f['emailId'].errors" class="invalid-feedback d-block">
+          <span *ngIf="f['emailId'].errors['required']">Email is required</span>
+          <span *ngIf="f['emailId'].errors['email']">Enter a valid email address</span>
+        </div>
+      </div>
+
+      <!-- Password Input -->
+      <div class="mb-4">
+        <div class="d-flex justify-content-between mb-1">
+          <label for="password" class="form-label mb-0">Password</label>
+        </div>
+        <div class="input-group">
+          <span class="input-group-text login-input-addon"><i class="bi bi-lock"></i></span>
+          <input
+            type="password"
+            id="password"
+            formControlName="password"
+            class="form-control"
+            placeholder="Enter password"
+            [ngClass]="{ 'is-invalid': submitted && f['password'].errors }">
+        </div>
+        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback d-block">
+          <span *ngIf="f['password'].errors['required']">Password is required</span>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" [disabled]="loading"
+              class="btn btn-primary w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+        <span *ngIf="loading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>Sign In</span>
+      </button>
+    </form>
+
+    <div class="text-center mt-3">
+      <p class="text-muted small mb-0">
+        Don't have an account?
+        <a routerLink="/register" class="text-primary fw-semibold text-decoration-none ms-1">Create Account</a>
+      </p>
+    </div>
+
+  </div>
+</div>

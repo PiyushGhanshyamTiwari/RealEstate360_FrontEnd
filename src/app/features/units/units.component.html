@@ -1,0 +1,282 @@
+<div class="animated-fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h2 text-gradient mb-1">Rental Units Management</h1>
+      <p class="text-muted">Browse, register, and update property housing units</p>
+    </div>
+    <button *ngIf="isOwner" (click)="toggleRegisterForm()" class="btn btn-primary d-flex align-items-center gap-2">
+      <i class="bi" [ngClass]="showRegisterForm ? 'bi-list-ul' : 'bi-plus-lg'"></i>
+      <span>{{ showRegisterForm ? 'View All Units' : 'Register New Unit' }}</span>
+    </button>
+  </div>
+
+  <!-- ERROR / SUCCESS ALERTS -->
+  <div *ngIf="errorMessage" class="alert alert-danger py-2 mb-3">{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="alert alert-success py-2 mb-3">{{ successMessage }}</div>
+
+  <!-- UNIT REGISTER / EDIT FORM -->
+  <div *ngIf="showRegisterForm && isOwner" class="card glass-panel p-4 mb-4">
+    <h4 class="fw-bold mb-3 text-gradient">{{ editUnitId ? 'Edit Unit Details' : 'Register Unit' }}</h4>
+    <form [formGroup]="unitForm" (ngSubmit)="onUnitSubmit()">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="unitType">Unit Type</label>
+          <select id="unitType" formControlName="type" class="form-select" [ngClass]="{ 'is-invalid': submitted && fu['type'].errors }">
+            <option value="" disabled selected>Select unit type...</option>
+            <option value="APARTMENT">Apartment</option>
+            <option value="VILLA">Villa</option>
+            <option value="OFFICE">Office</option>
+            <option value="STUDIO">Studio</option>
+            <option value="COMMERCIAL">Commercial</option>
+          </select>
+          <div *ngIf="submitted && fu['type'].errors" class="invalid-feedback">
+            Unit Type is required.
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="parentProperty">Associated Property</label>
+          <select id="parentProperty" formControlName="propertyId" class="form-select" [ngClass]="{ 'is-invalid': submitted && fu['propertyId'].errors }">
+            <option value="" disabled selected>Select property...</option>
+            <option *ngFor="let p of ownerProperties" [value]="p.propertyId">{{ p.propertyName }} ({{ p.propertyCity }})</option>
+          </select>
+          <div *ngIf="submitted && fu['propertyId'].errors" class="invalid-feedback">
+            Please select a property.
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="unitArea">Area (Sq Ft)</label>
+          <input type="number" id="unitArea" formControlName="areaSqFt" class="form-control" placeholder="e.g. 1200" [ngClass]="{ 'is-invalid': submitted && fu['areaSqFt'].errors }">
+          <div *ngIf="submitted && fu['areaSqFt'].errors" class="invalid-feedback">
+            Area must be a positive number.
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="unitFloor">Floor Number</label>
+          <input type="number" id="unitFloor" formControlName="floor" class="form-control" placeholder="0 for Ground" [ngClass]="{ 'is-invalid': submitted && fu['floor'].errors }">
+          <div *ngIf="submitted && fu['floor'].errors" class="invalid-feedback">
+            Floor number cannot be negative.
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="availFrom">Available From Date</label>
+          <input type="date" id="availFrom" formControlName="availableFrom" class="form-control" [ngClass]="{ 'is-invalid': submitted && fu['availableFrom'].errors }">
+          <div *ngIf="submitted && fu['availableFrom'].errors" class="invalid-feedback">
+            Available date is required.
+          </div>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-md-6 mb-3 mb-md-0">
+          <label class="form-label" for="rent">Monthly Rent (USD)</label>
+          <input type="number" id="rent" formControlName="rentAmount" class="form-control" placeholder="e.g. 1500" [ngClass]="{ 'is-invalid': submitted && fu['rentAmount'].errors }">
+          <div *ngIf="submitted && fu['rentAmount'].errors" class="invalid-feedback">
+            Rent must be a positive number.
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="deposit">Security Deposit (USD)</label>
+          <input type="number" id="deposit" formControlName="depositAmount" class="form-control" placeholder="e.g. 3000" [ngClass]="{ 'is-invalid': submitted && fu['depositAmount'].errors }">
+          <div *ngIf="submitted && fu['depositAmount'].errors" class="invalid-feedback">
+            Deposit must be a positive number.
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" [disabled]="submitting" class="btn btn-primary px-5 me-2">
+        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+        <span>Save Unit</span>
+      </button>
+      <button type="button" (click)="toggleRegisterForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+
+  <!-- UNIT LISTS WITH FILTER (ALL ROLES) -->
+  <div *ngIf="!showRegisterForm" class="card glass-panel p-4 mb-4">
+    <h5 class="fw-bold mb-3 text-gradient">Search Filters</h5>
+    
+    <!-- Search Controls -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3 col-sm-6">
+        <label class="form-label">Type</label>
+        <select [(ngModel)]="filterType" class="form-select">
+          <option value="">All Types</option>
+          <option value="APARTMENT">Apartment</option>
+          <option value="VILLA">Villa</option>
+          <option value="OFFICE">Office</option>
+          <option value="STUDIO">Studio</option>
+          <option value="COMMERCIAL">Commercial</option>
+        </select>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <label class="form-label">Status</label>
+        <select [(ngModel)]="filterStatus" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="AVAILABLE">Available</option>
+          <option value="LEASED">Leased</option>
+          <option value="UNDER_MAINTAINANCE">Under Maintenance</option>
+        </select>
+      </div>
+      <div class="col-md-2 col-sm-6">
+        <label class="form-label">Min Rent ($)</label>
+        <input type="number" [(ngModel)]="filterMinRent" class="form-control" placeholder="Min">
+      </div>
+      <div class="col-md-2 col-sm-6">
+        <label class="form-label">Max Rent ($)</label>
+        <input type="number" [(ngModel)]="filterMaxRent" class="form-control" placeholder="Max">
+      </div>
+      <div class="col-md-2 col-sm-6">
+        <label class="form-label">City</label>
+        <input type="text" [(ngModel)]="filterCity" class="form-control" placeholder="e.g. Bangalore">
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mb-4">
+      <button (click)="resetFilters()" class="btn btn-secondary py-2 px-4">Reset</button>
+      <button (click)="applyFilters()" class="btn btn-primary py-2 px-4">Apply Filters</button>
+    </div>
+
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2">Loading rental units...</p>
+    </div>
+
+    <!-- Rental Units Table -->
+    <div *ngIf="!loading && units.length > 0" class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Type</th>
+            <th>Area / Floor</th>
+            <th>Rent Amount</th>
+            <th>Deposit</th>
+            <th>Status</th>
+            <th>Amenities</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of units">
+            <td>
+              <strong class="text-dark">{{ u.propertyName }}</strong>
+              <div class="small text-muted">{{ u.propertyCity }}, {{ u.propertyCountry }}</div>
+            </td>
+            <td><span class="badge bg-secondary text-uppercase">{{ u.type }}</span></td>
+            <td>
+              <div>{{ u.areaSqFt }} SqFt</div>
+              <div class="small text-muted">Floor {{ u.floor }}</div>
+            </td>
+            <td><strong class="text-primary">$ {{ u.rentAmount }}/mo</strong></td>
+            <td>$ {{ u.depositAmount }}</td>
+            <td>
+              <span class="badge" 
+                    [ngClass]="{
+                      'bg-success bg-opacity-15 text-success': u.status === 'AVAILABLE',
+                      'bg-info bg-opacity-15 text-info': u.status === 'LEASED',
+                      'bg-warning bg-opacity-15 text-warning': u.status === 'UNDER_MAINTAINANCE'
+                    }">
+                {{ u.status }}
+              </span>
+            </td>
+            <td>
+              <div *ngIf="u.amenities && u.amenities.length > 0" class="d-flex flex-wrap gap-1">
+                <span *ngFor="let am of u.amenities" class="badge bg-light border border-secondary text-secondary" style="font-size: 0.7rem;">{{ am }}</span>
+              </div>
+              <span *ngIf="!u.amenities || u.amenities.length === 0" class="text-muted small">None</span>
+            </td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <button (click)="openDetailView(u)" class="btn btn-outline-info btn-sm py-1 px-2.5">
+                  <i class="bi bi-eye"></i> Details
+                </button>
+                <button *ngIf="isOwner && u.status === 'AVAILABLE'" (click)="onEditUnit(u)" class="btn btn-outline-warning btn-sm py-1 px-2.5">
+                  <i class="bi bi-pencil"></i> Edit
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && units.length === 0" class="text-center py-5">
+      <i class="bi bi-door-closed text-muted fs-1 mb-2"></i>
+      <h5 class="fw-bold text-dark">No Rental Units</h5>
+      <p class="text-muted small">No units recorded matching filters.</p>
+    </div>
+
+  </div>
+
+  <!-- UNIT WORKFLOW DETAILS (POPUP MODAL OR EXPANDED SECTION) -->
+  <div *ngIf="selectedUnit" class="card glass-panel p-4 animated-fade-in mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary border-opacity-10 pb-2">
+      <h4 class="fw-bold mb-0 text-gradient">{{ selectedUnit.propertyName }} - Unit Details</h4>
+      <button (click)="closeDetailView()" class="btn-close"></button>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <h5 class="text-dark fw-bold mb-3">Unit Specs</h5>
+        <table class="table table-borderless m-0 text-secondary">
+          <tr><td>Type:</td><td><strong class="text-dark">{{ selectedUnit.type }}</strong></td></tr>
+          <tr><td>Area:</td><td><strong class="text-dark">{{ selectedUnit.areaSqFt }} SqFt</strong></td></tr>
+          <tr><td>Floor Level:</td><td><strong class="text-dark">{{ selectedUnit.floor }}</strong></td></tr>
+          <tr><td>Availability:</td><td><strong class="text-dark">{{ selectedUnit.availableFrom | date:'mediumDate' }}</strong></td></tr>
+          <tr><td>Rent:</td><td><strong class="text-primary">$ {{ selectedUnit.rentAmount }} / month</strong></td></tr>
+          <tr><td>Deposit:</td><td><strong class="text-dark">$ {{ selectedUnit.depositAmount }}</strong></td></tr>
+          <tr><td>Status:</td><td><span class="badge bg-secondary">{{ selectedUnit.status }}</span></td></tr>
+        </table>
+      </div>
+      
+      <div class="col-md-6">
+        <!-- Photo upload / display segment -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="text-dark fw-bold mb-0">Photos</h5>
+          <button *ngIf="isOwner" (click)="photoInput.click()" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-upload"></i> Upload Photo
+          </button>
+          <input type="file" #photoInput (change)="onUploadPhoto($event)" class="d-none">
+        </div>
+
+        <!-- Photos Carousel/Grid -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <div *ngFor="let photo of photos" class="position-relative border border-secondary border-opacity-15 rounded overflow-hidden" style="width: 80px; height: 80px;">
+            <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center text-muted small">
+              <i class="bi bi-image"></i>
+            </div>
+            <button (click)="onDownloadPhoto(photo.photoId)" class="btn btn-dark btn-sm position-absolute bottom-0 start-50 translate-middle-x w-100 py-0 text-white-50" style="font-size: 0.65rem; background: rgba(0,0,0,0.6);" title="Download File">
+              <i class="bi bi-download"></i>
+            </button>
+          </div>
+          <div *ngIf="photos.length === 0" class="text-muted small py-3">No photos uploaded for this unit.</div>
+        </div>
+
+        <!-- Amenities Adding Segment -->
+        <div class="border-top border-secondary border-opacity-10 pt-3">
+          <h5 class="text-dark fw-bold mb-2">Amenities</h5>
+          <div *ngIf="isOwner" class="input-group input-group-sm mb-3">
+            <input type="text" [(ngModel)]="newAmenityName" class="form-control" placeholder="Add amenity name...">
+            <button (click)="onAddAmenity()" class="btn btn-primary" type="button">Add</button>
+          </div>
+          <div class="d-flex flex-wrap gap-1">
+            <span *ngFor="let am of selectedUnit.amenities" class="badge bg-light border border-secondary text-secondary py-1.5 px-2.5">{{ am }}</span>
+            <div *ngIf="!selectedUnit.amenities || selectedUnit.amenities.length === 0" class="text-muted small">No amenities specified.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tenant workflow action -->
+    <div *ngIf="role === 'TENANT' && selectedUnit.status === 'AVAILABLE'" class="d-flex justify-content-end">
+      <a routerLink="/applications" [queryParams]="{ applyUnitId: selectedUnit.unitId }" class="btn btn-primary px-5">
+        <i class="bi bi-file-earmark-plus"></i> Apply for Leasing
+      </a>
+    </div>
+  </div>
+
+</div>

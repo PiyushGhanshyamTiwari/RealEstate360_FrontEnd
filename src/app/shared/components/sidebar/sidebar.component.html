@@ -1,0 +1,104 @@
+<div class="d-flex flex-column flex-shrink-0 p-3 h-100 sidebar-panel">
+  <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none sidebar-logo">
+    <i class="bi bi-building-fill me-2 fs-4 text-gradient"></i>
+    <span class="fs-4 fw-bold text-gradient">RealEstate360</span>
+  </a>
+  <hr class="sidebar-divider">
+
+  <ul class="nav nav-pills flex-column mb-auto gap-1">
+    <li class="nav-item">
+      <a routerLink="/dashboard" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['OWNER', 'TENANT', 'ADMIN'])">
+      <a routerLink="/properties" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-houses"></i>
+        <span>Properties</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['OWNER', 'TENANT', 'ADMIN'])">
+      <a routerLink="/units" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-door-open"></i>
+        <span>Units</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['OWNER', 'TENANT'])">
+      <a routerLink="/applications" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-file-earmark-text"></i>
+        <span>Lease Apps</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['OWNER', 'TENANT'])">
+      <a routerLink="/leases" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-journal-check"></i>
+        <span>Leases</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['ACCOUNT OFFICER', 'TENANT', 'OWNER'])">
+      <a routerLink="/invoices" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-receipt"></i>
+        <span>Invoices</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['ACCOUNT OFFICER', 'ADMIN'])">
+      <a routerLink="/ledger" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-book-half"></i>
+        <span>Financial Ledger</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['OWNER', 'TENANT', 'TECHNICIAN'])">
+      <a routerLink="/maintenance" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-tools"></i>
+        <span>Maintenance</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['ADMIN'])">
+      <a routerLink="/all-users" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-people"></i>
+        <span>All Users</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['ADMIN'])">
+      <a routerLink="/account-officers" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-person-badge"></i>
+        <span>Account Officers</span>
+      </a>
+    </li>
+
+    <li *ngIf="hasAccess(['ADMIN'])">
+      <a routerLink="/admin-logs" routerLinkActive="active" class="sidebar-link">
+        <i class="bi bi-shield-lock"></i>
+        <span>Audit Trail</span>
+      </a>
+    </li>
+  </ul>
+
+  <hr class="sidebar-divider">
+
+  <!-- Current User Detail Section -->
+  <div class="user-section p-2 rounded d-flex align-items-center gap-2">
+    <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold"
+         style="width: 38px; height: 38px; flex-shrink: 0;">
+      {{ userNameInitials }}
+    </div>
+    <div class="overflow-hidden">
+      <h6 class="mb-0 text-truncate sidebar-username" style="font-size: 0.85rem;">
+        {{ authService.currentUserValue?.userName }}
+      </h6>
+      <span class="badge sidebar-badge text-uppercase" style="font-size: 0.65rem;">
+        {{ authService.userRole }}
+      </span>
+    </div>
+  </div>
+</div>

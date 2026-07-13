@@ -1,0 +1,268 @@
+<div class="animated-fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h2 text-gradient mb-1">Maintenance Center</h1>
+      <p class="text-muted">Raise requests, assign specialists, and log service records</p>
+    </div>
+    <button *ngIf="isTenant && !showTenantForm" (click)="toggleTenantForm()" class="btn btn-primary d-flex align-items-center gap-2">
+      <i class="bi bi-tools"></i>
+      <span>Report Maintenance Issue</span>
+    </button>
+  </div>
+
+  <!-- ERROR / SUCCESS ALERTS -->
+  <div *ngIf="errorMessage" class="alert alert-danger py-2 mb-3">{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="alert alert-success py-2 mb-3">{{ successMessage }}</div>
+
+  <!-- TENANT REPORT ISSUE FORM -->
+  <div *ngIf="showTenantForm && isTenant" class="card glass-panel p-4 mb-4">
+    <h4 class="fw-bold mb-3 text-gradient">Report Maintenance Issue</h4>
+    
+    <form [formGroup]="issueForm" (ngSubmit)="onIssueSubmit()">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="leaseUnit">My Leased Unit ID</label>
+          <select id="leaseUnit" formControlName="unitId" class="form-select" [ngClass]="{ 'is-invalid': submitted && f['unitId'].errors }">
+            <option value="" disabled selected>Select unit...</option>
+            <option *ngFor="let u of tenantUnits" [value]="u.unitId">
+              Unit {{ u.unitId }} - {{ u.type }} ({{ u.propertyName }})
+            </option>
+          </select>
+          <div *ngIf="submitted && f['unitId'].errors" class="invalid-feedback">
+            Unit selection is required.
+          </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="issueCat">Issue Category</label>
+          <select id="issueCat" formControlName="category" class="form-select" [ngClass]="{ 'is-invalid': submitted && f['category'].errors }">
+            <option value="" disabled selected>Choose category...</option>
+            <option value="ELECTRICAL">Electrical Repair</option>
+            <option value="PLUMBING">Plumbing Work</option>
+            <option value="CLEANING">Cleaning Services</option>
+            <option value="PAINTING">Painting Request</option>
+            <option value="CARPENTRY">Carpentry & Structural</option>
+          </select>
+          <div *ngIf="submitted && f['category'].errors" class="invalid-feedback">
+            Please select a category.
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label" for="desc">Issue Description</label>
+        <textarea id="desc" formControlName="issueDescription" class="form-control" rows="3" placeholder="Provide detailed remarks on the problem..." [ngClass]="{ 'is-invalid': submitted && f['issueDescription'].errors }"></textarea>
+        <div *ngIf="submitted && f['issueDescription'].errors" class="invalid-feedback">
+          Issue description cannot be blank.
+        </div>
+      </div>
+
+      <button type="submit" [disabled]="submitting" class="btn btn-primary px-5 me-2">
+        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+        <span>File Request</span>
+      </button>
+      <button type="button" (click)="toggleTenantForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+
+  <!-- MAIN INDEX CARD -->
+  <div *ngIf="!showTenantForm" class="card glass-panel p-4 mb-4">
+    
+    <!-- Filter controls for Manager -->
+    <div *ngIf="isOwner" class="row g-3 mb-4 align-items-end">
+      <div class="col-md-4 col-sm-6">
+        <label class="form-label">Status</label>
+        <select [(ngModel)]="filterStatus" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="ASSIGNED">Assigned</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+      </div>
+      <div class="col-md-4 col-sm-6">
+        <label class="form-label">Severity</label>
+        <select [(ngModel)]="filterSeverity" class="form-select">
+          <option value="">All Severities</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button (click)="loadSchedules()" class="btn btn-primary w-100 py-2">Apply Filters</button>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2">Loading schedules...</p>
+    </div>
+
+    <!-- Schedules Table -->
+    <div *ngIf="!loading && schedules.length > 0" class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Req ID</th>
+            <th>Tenant ID</th>
+            <th>Unit Ref</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Severity</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of schedules">
+            <td><strong class="text-dark">#{{ s.scheduleId }}</strong></td>
+            <td>User #{{ s.userId }}</td>
+            <td>Unit #{{ s.unitId }}</td>
+            <td><span class="badge bg-secondary text-uppercase">{{ s.category }}</span></td>
+            <td style="max-width: 250px;" class="text-truncate">{{ s.issueDescription }}</td>
+            <td>
+              <span class="badge text-uppercase" 
+                    [ngClass]="{
+                      'bg-success': s.severity === 'LOW',
+                      'bg-warning text-dark': s.severity === 'MEDIUM',
+                      'bg-danger': s.severity === 'HIGH' || s.severity === 'CRITICAL'
+                    }">
+                {{ s.severity || 'Not Assigned' }}
+              </span>
+            </td>
+            <td>
+              <span class="badge text-uppercase bg-light border border-secondary text-secondary">
+                {{ s.status }}
+              </span>
+            </td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <button (click)="openDetailView(s)" class="btn btn-outline-info btn-sm py-1 px-2.5">
+                  <i class="bi bi-eye"></i> Details
+                </button>
+                <!-- Owner assigns tech -->
+                <button *ngIf="isOwner && s.status === 'OPEN'" (click)="openAssignModal(s)" class="btn btn-outline-warning btn-sm py-1 px-2.5">
+                  <i class="bi bi-person-plus"></i> Assign
+                </button>
+                <!-- Tech logs remarks -->
+                <button *ngIf="isTechnician && s.status !== 'RESOLVED' && s.status !== 'CLOSED'" (click)="openStatusModal(s)" class="btn btn-outline-success btn-sm py-1 px-2.5">
+                  <i class="bi bi-check2-square"></i> Update
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="!loading && schedules.length === 0" class="text-center py-5">
+      <i class="bi bi-tools text-muted fs-1 mb-2"></i>
+      <h5 class="fw-bold text-dark">No Active Requests</h5>
+      <p class="text-muted small">No maintenance task records exist.</p>
+    </div>
+  </div>
+
+  <!-- DETAILED MODAL SECTION (SCHEDULE DETAILS & ACTION LOGS) -->
+  <div *ngIf="selectedSchedule" class="card glass-panel p-4 mb-4 animated-fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary border-opacity-10 pb-2">
+      <h4 class="fw-bold mb-0 text-gradient">Maintenance Request Details #{{ selectedSchedule.scheduleId }}</h4>
+      <button (click)="closeDetailView()" class="btn-close"></button>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <h5 class="text-dark fw-bold mb-2">General Info</h5>
+        <table class="table table-borderless m-0 text-secondary small">
+          <tr><td>Issue description:</td><td><strong class="text-dark">{{ selectedSchedule.issueDescription }}</strong></td></tr>
+          <tr><td>Category:</td><td>{{ selectedSchedule.category }}</td></tr>
+          <tr><td>Severity Level:</td><td><span class="badge bg-secondary">{{ selectedSchedule.severity || 'PENDING' }}</span></td></tr>
+          <tr><td>Current Status:</td><td><span class="badge bg-info">{{ selectedSchedule.status }}</span></td></tr>
+          <tr><td>Scheduled Date:</td><td>{{ selectedSchedule.scheduledDate || 'TBD' }}</td></tr>
+          <tr><td>Raised On:</td><td>{{ selectedSchedule.createdAt | date:'medium' }}</td></tr>
+          <tr *ngIf="selectedSchedule.technicianUserId"><td>Technician User ID:</td><td>#{{ selectedSchedule.technicianUserId }}</td></tr>
+        </table>
+      </div>
+      
+      <div class="col-md-6">
+        <h5 class="text-dark fw-bold mb-2">Execution Progress Logs</h5>
+        <div *ngIf="loadingLogs" class="spinner-border spinner-border-sm text-primary"></div>
+        
+        <div *ngIf="!loadingLogs && logs.length > 0" class="d-flex flex-column gap-2">
+          <div *ngFor="let lg of logs" class="bg-light p-2.5 rounded border border-secondary border-opacity-10">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="text-dark fw-bold small">Work Log #{{ lg.logId }}</span>
+              <span class="text-muted" style="font-size: 0.7rem;">{{ lg.logDate | date:'medium' }}</span>
+            </div>
+            <p class="mb-0 text-muted small">{{ lg.remarks }}</p>
+          </div>
+        </div>
+
+        <div *ngIf="!loadingLogs && logs.length === 0" class="text-muted small py-3">No activity logs recorded yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OWNER ASSIGN TECHNICIAN OVERLAY MODAL -->
+  <div *ngIf="activeAssignSchedule" class="modal-overlay d-flex align-items-center justify-content-center">
+    <div class="card glass-panel p-4 w-100 animated-fade-in mx-3" style="max-width: 440px; background: white !important;">
+      <h4 class="fw-bold mb-3 text-gradient">Assign Technician</h4>
+      <p class="text-muted small">Select a technician and assign severity level for schedule <strong>#{{ activeAssignSchedule.scheduleId }}</strong>.</p>
+      
+      <div class="mb-3">
+        <label class="form-label">Available Technicians</label>
+        <select [(ngModel)]="assignTechUserId" class="form-select">
+          <option value="" disabled selected>Choose technician...</option>
+          <option *ngFor="let t of technicians" [value]="t.userId">
+            Tech ID: {{ t.technicianId }} (User ID: {{ t.userId }}) - Spec: {{ t.specialization }} ({{ t.city }})
+          </option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Severity Level</label>
+        <select [(ngModel)]="assignSeverity" class="form-select">
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <button (click)="closeAssignModal()" class="btn btn-secondary py-2">Close</button>
+        <button (click)="confirmAssignment()" [disabled]="!assignTechUserId" class="btn btn-primary py-2 px-4">Assign Specialist</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECHNICIAN UPDATE STATUS OVERLAY MODAL -->
+  <div *ngIf="activeStatusSchedule" class="modal-overlay d-flex align-items-center justify-content-center">
+    <div class="card glass-panel p-4 w-100 animated-fade-in mx-3" style="max-width: 440px; background: white !important;">
+      <h4 class="fw-bold mb-3 text-gradient">Update Task Status</h4>
+      <p class="text-muted small">Log details and update progress for schedule <strong>#{{ activeStatusSchedule.scheduleId }}</strong>.</p>
+      
+      <div class="mb-3">
+        <label class="form-label">Execution Status</label>
+        <select [(ngModel)]="updateStatusValue" class="form-select">
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed / Lock issue</option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Work Remarks / Action Log</label>
+        <textarea [(ngModel)]="updateRemarksValue" class="form-control" rows="3" placeholder="Enter work remarks details..."></textarea>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <button (click)="closeStatusModal()" class="btn btn-secondary py-2">Close</button>
+        <button (click)="confirmStatusUpdate()" class="btn btn-success py-2 px-4">Log Status Update</button>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,17 @@
+<div class="d-flex" style="height: 100vh; overflow: hidden;">
+  <!-- Sidebar -->
+  <app-sidebar></app-sidebar>
+
+  <!-- Main Content Area -->
+  <div class="d-flex flex-column flex-grow-1" style="overflow: hidden;">
+    <!-- Navbar -->
+    <app-navbar></app-navbar>
+
+    <!-- Dynamic Content Router Outlet -->
+    <main class="flex-grow-1 p-4" style="overflow-y: auto;">
+      <div class="container-fluid layout-max-width">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
+</div>

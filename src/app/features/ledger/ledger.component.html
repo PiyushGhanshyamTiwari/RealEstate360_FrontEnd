@@ -1,0 +1,109 @@
+<div class="animated-fade-in">
+  <div class="mb-4">
+    <h1 class="h2 text-gradient mb-1">Company Financial Ledger</h1>
+    <p class="text-muted">Track monthly rent collections, profit margins, and corporate balances</p>
+  </div>
+
+  <!-- ERROR ALERTS -->
+  <div *ngIf="errorMessage" class="alert alert-danger py-2 mb-3">{{ errorMessage }}</div>
+
+  <div class="card glass-panel p-4 mb-4">
+    <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-search me-2 text-primary"></i>Query Ledger Archives</h5>
+    
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4 col-sm-6">
+        <label class="form-label">Month</label>
+        <select [(ngModel)]="queryMonth" class="form-select">
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+      </div>
+      <div class="col-md-4 col-sm-6">
+        <label class="form-label">Year</label>
+        <input type="number" [(ngModel)]="queryYear" class="form-control" placeholder="e.g. 2026">
+      </div>
+      <div class="col-md-4">
+        <button (click)="onQueryLedger()" class="btn btn-primary w-100 py-2">
+          <i class="bi bi-journal-text me-2"></i>Fetch Statement
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEDGER SUMMARY METRICS -->
+  <div class="row g-4 mb-4" *ngIf="entries.length > 0">
+    <div class="col-md-6">
+      <div class="card glass-panel p-4 text-center border-start border-primary border-4">
+        <span class="text-muted small">Total Collections</span>
+        <h2 class="fw-bold text-dark mt-1">$ {{ totalCollected | number:'1.2-2' }}</h2>
+        <div class="progress mt-3 bg-light" style="height: 6px;">
+          <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card glass-panel p-4 text-center border-start border-success border-4">
+        <span class="text-muted small">Net Company Profit</span>
+        <h2 class="fw-bold text-success mt-1">$ {{ totalProfit | number:'1.2-2' }}</h2>
+        <div class="progress mt-3 bg-light" style="height: 6px;">
+          <div class="progress-bar bg-success" role="progressbar" [style.width.%]="averageProfitPercent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEDGER RECORDS TABLE -->
+  <div *ngIf="entries.length > 0" class="card glass-panel p-4">
+    <h5 class="fw-bold mb-3 text-dark">Statement Records: {{ getMonthName(queryMonth) }} {{ queryYear }}</h5>
+    
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Entry ID</th>
+            <th>Invoice Ref</th>
+            <th>Audited By</th>
+            <th>Unit Details</th>
+            <th>Rent Collected</th>
+            <th>Profit Margin</th>
+            <th>Profit Amount</th>
+            <th>Logged Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ent of entries">
+            <td><strong class="text-dark">#{{ ent.ledgerEntryId }}</strong></td>
+            <td>Invoice #{{ ent.invoiceId }}</td>
+            <td>
+              <div class="text-dark small">{{ ent.accountOfficerName || 'System Automated' }}</div>
+              <div class="small text-muted" *ngIf="ent.accountOfficerId">Officer ID: {{ ent.accountOfficerId }}</div>
+            </td>
+            <td>
+              <span class="badge bg-light border border-secondary text-secondary">{{ ent.unitType }}</span>
+            </td>
+            <td><strong class="text-dark">$ {{ ent.amountPaid }}</strong></td>
+            <td>{{ ent.profitPercent }}%</td>
+            <td><strong class="text-success">$ {{ ent.profitAmount }}</strong></td>
+            <td>{{ ent.createdAt | date:'medium' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="searched && entries.length === 0" class="card glass-panel p-5 text-center">
+    <i class="bi bi-wallet2 text-muted fs-1 mb-2"></i>
+    <h5 class="fw-bold text-dark">No Ledger Entries Found</h5>
+    <p class="text-muted small mb-0">There are no financial ledger entries recorded for {{ getMonthName(queryMonth) }} {{ queryYear }}.</p>
+  </div>
+</div>

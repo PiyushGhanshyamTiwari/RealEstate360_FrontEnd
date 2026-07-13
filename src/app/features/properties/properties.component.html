@@ -1,0 +1,139 @@
+<div class="animated-fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h2 text-gradient mb-1">Properties Management</h1>
+      <p class="text-muted">Register and browse real estate projects</p>
+    </div>
+    <button *ngIf="isOwner" (click)="toggleRegisterForm()" class="btn btn-primary d-flex align-items-center gap-2">
+      <i class="bi" [ngClass]="showRegisterForm ? 'bi-list-ul' : 'bi-plus-lg'"></i>
+      <span>{{ showRegisterForm ? 'View My Properties' : 'Register Property' }}</span>
+    </button>
+  </div>
+
+  <!-- PROPERTY REGISTRATION FORM (OWNER ONLY) -->
+  <div *ngIf="showRegisterForm && isOwner" class="card glass-panel p-4 mb-4">
+    <h4 class="fw-bold mb-3 text-gradient">Property Details</h4>
+    <div *ngIf="errorMessage" class="alert alert-danger py-2">{{ errorMessage }}</div>
+    <div *ngIf="successMessage" class="alert alert-success py-2">{{ successMessage }}</div>
+    
+    <form [formGroup]="propertyForm" (ngSubmit)="onRegisterSubmit()">
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="propName">Property Name</label>
+          <input type="text" id="propName" formControlName="propertyName" class="form-control" placeholder="e.g. Skyline Residency" [ngClass]="{ 'is-invalid': submitted && f['propertyName'].errors }">
+          <div *ngIf="submitted && f['propertyName'].errors" class="invalid-feedback">
+            Property name is required.
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="propAddr">Address</label>
+          <input type="text" id="propAddr" formControlName="propertyAddress" class="form-control" placeholder="123 Main St" [ngClass]="{ 'is-invalid': submitted && f['propertyAddress'].errors }">
+          <div *ngIf="submitted && f['propertyAddress'].errors" class="invalid-feedback">
+            Property Address is required.
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="propCity">City</label>
+          <input type="text" id="propCity" formControlName="propertyCity" class="form-control" placeholder="Bangalore" [ngClass]="{ 'is-invalid': submitted && f['propertyCity'].errors }">
+          <div *ngIf="submitted && f['propertyCity'].errors" class="invalid-feedback">
+            Property City is required.
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="propState">State</label>
+          <input type="text" id="propState" formControlName="propertyState" class="form-control" placeholder="Karnataka" [ngClass]="{ 'is-invalid': submitted && f['propertyState'].errors }">
+          <div *ngIf="submitted && f['propertyState'].errors" class="invalid-feedback">
+            Property State is required.
+          </div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="propZip">Postal / Zip Code</label>
+          <input type="text" id="propZip" formControlName="propertyPostalCode" class="form-control" placeholder="6-digit postal code" [ngClass]="{ 'is-invalid': submitted && f['propertyPostalCode'].errors }">
+          <div *ngIf="submitted && f['propertyPostalCode'].errors" class="invalid-feedback">
+            Postal code must be exactly 6 digits.
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label" for="propCountry">Country</label>
+        <input type="text" id="propCountry" formControlName="propertyCountry" class="form-control" placeholder="India" [ngClass]="{ 'is-invalid': submitted && f['propertyCountry'].errors }">
+        <div *ngIf="submitted && f['propertyCountry'].errors" class="invalid-feedback">
+          Property Country is required.
+        </div>
+      </div>
+
+      <button type="submit" [disabled]="submitting" class="btn btn-primary px-5">
+        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+        <span>Save Property</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- PROPERTY LIST & SEARCH (ALL ROLES) -->
+  <div *ngIf="!showRegisterForm" class="card glass-panel p-4">
+    
+    <!-- Search Filters -->
+    <div class="row mb-4 g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Search by City</label>
+        <div class="input-group">
+          <input type="text" [(ngModel)]="searchCity" class="form-control" placeholder="Enter city name..." [ngModelOptions]="{standalone: true}">
+          <button class="btn btn-primary" type="button" (click)="onSearchCity()">Search</button>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Search by State</label>
+        <div class="input-group">
+          <input type="text" [(ngModel)]="searchState" class="form-control" placeholder="Enter state name..." [ngModelOptions]="{standalone: true}">
+          <button class="btn btn-primary" type="button" (click)="onSearchState()">Search</button>
+        </div>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <button class="btn btn-secondary py-2" type="button" (click)="resetSearch()">Reset Filters</button>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2">Loading properties...</p>
+    </div>
+
+    <!-- Table View -->
+    <div *ngIf="!loading && properties.length > 0" class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Address</th>
+            <th>City</th>
+            <th>State</th>
+            <th>Postal Code</th>
+            <th>Country</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let prop of properties">
+            <td><strong class="text-dark">{{ prop.propertyName }}</strong></td>
+            <td>{{ prop.propertyAddress }}</td>
+            <td>{{ prop.propertyCity }}</td>
+            <td>{{ prop.propertyState }}</td>
+            <td>{{ prop.propertyPostalCode }}</td>
+            <td>{{ prop.propertyCountry }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && properties.length === 0" class="text-center py-5">
+      <i class="bi bi-houses-fill text-muted fs-1 mb-2"></i>
+      <h5 class="fw-bold text-dark">No Properties Found</h5>
+      <p class="text-muted small">No property matches the current search or filters.</p>
+    </div>
+
+  </div>
+</div>

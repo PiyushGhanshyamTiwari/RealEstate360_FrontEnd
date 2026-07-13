@@ -1,0 +1,143 @@
+<div class="animated-fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h2 text-gradient mb-1">Leasing Applications</h1>
+      <p class="text-muted">Apply for units and review leasing applications</p>
+    </div>
+    <button *ngIf="isTenant && !showApplyForm" (click)="toggleApplyForm()" class="btn btn-primary d-flex align-items-center gap-2">
+      <i class="bi bi-file-earmark-plus"></i>
+      <span>New Lease Application</span>
+    </button>
+  </div>
+
+  <!-- ERROR / SUCCESS ALERTS -->
+  <div *ngIf="errorMessage" class="alert alert-danger py-2 mb-3">{{ errorMessage }}</div>
+  <div *ngIf="successMessage" class="alert alert-success py-2 mb-3">{{ successMessage }}</div>
+
+  <!-- SUBMIT LEASE APPLICATION (TENANT ONLY) -->
+  <div *ngIf="showApplyForm && isTenant" class="card glass-panel p-4 mb-4">
+    <h4 class="fw-bold mb-3 text-gradient">Submit Lease Application</h4>
+    <form [formGroup]="applyForm" (ngSubmit)="onApplySubmit()">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="appUnit">Select Unit ID</label>
+          <select id="appUnit" formControlName="unitId" class="form-select" [ngClass]="{ 'is-invalid': submitted && fa['unitId'].errors }">
+            <option value="" disabled selected>Choose unit...</option>
+            <option *ngFor="let u of availableUnits" [value]="u.unitId">
+              Unit {{ u.unitId }} - {{ u.type }} at {{ u.propertyName }} ($ {{ u.rentAmount }}/mo)
+            </option>
+          </select>
+          <div *ngIf="submitted && fa['unitId'].errors" class="invalid-feedback">
+            Unit selection is required.
+          </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="start">Lease Start Date</label>
+          <input type="date" id="start" formControlName="startDate" class="form-control" [ngClass]="{ 'is-invalid': submitted && fa['startDate'].errors }">
+          <div *ngIf="submitted && fa['startDate'].errors" class="invalid-feedback">
+            Start date is required.
+          </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+          <label class="form-label" for="end">Lease End Date</label>
+          <input type="date" id="end" formControlName="endDate" class="form-control" [ngClass]="{ 'is-invalid': submitted && fa['endDate'].errors }">
+          <div *ngIf="submitted && fa['endDate'].errors" class="invalid-feedback">
+            End date is required.
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" [disabled]="submitting" class="btn btn-primary px-5 me-2">
+        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
+        <span>Submit Application</span>
+      </button>
+      <button type="button" (click)="toggleApplyForm()" class="btn btn-secondary">Cancel</button>
+    </form>
+  </div>
+
+  <!-- LEASE APPLICATIONS INDEX -->
+  <div *ngIf="!showApplyForm" class="card glass-panel p-4">
+    
+    <!-- Owner Quick Unit filter -->
+    <div *ngIf="isOwner" class="mb-4 d-flex align-items-end gap-3 flex-wrap">
+      <div>
+        <label class="form-label">Review applications by Unit</label>
+        <select [(ngModel)]="ownerSelectedUnitId" class="form-select" style="min-width: 250px;">
+          <option value="" disabled selected>Select unit to check applications...</option>
+          <option *ngFor="let u of ownerUnits" [value]="u.unitId">
+            Unit {{ u.unitId }} - {{ u.type }} ({{ u.propertyName }})
+          </option>
+        </select>
+      </div>
+      <button (click)="loadOwnerApplications()" class="btn btn-primary py-2 px-4">Load Applications</button>
+    </div>
+
+    <div *ngIf="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2">Loading applications...</p>
+    </div>
+
+    <!-- Application Table -->
+    <div *ngIf="!loading && applications.length > 0" class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>App ID</th>
+            <th>Unit & Property Details</th>
+            <th>User ID</th>
+            <th>Lease Term</th>
+            <th>Submitted On</th>
+            <th>Status</th>
+            <th *ngIf="isOwner" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let app of applications">
+            <td><strong class="text-dark">#{{ app.applicationId }}</strong></td>
+            <td>
+              <div>Unit {{ app.unitId }} {{ app.type ? '(' + app.type + ')' : '' }}</div>
+              <div class="small text-muted">{{ app.propertyName || 'Property details' }}</div>
+            </td>
+            <td>Tenant #{{ app.userId }}</td>
+            <td>
+              <div class="small text-muted">From: {{ app.startDate | date:'mediumDate' }}</div>
+              <div class="small text-muted">To: {{ app.endDate | date:'mediumDate' }}</div>
+            </td>
+            <td>{{ app.submittedAt | date:'medium' }}</td>
+            <td>
+              <span class="badge text-uppercase" 
+                    [ngClass]="{
+                      'bg-warning text-dark': app.status === 'Submitted' || app.status === 'Pending',
+                      'bg-success': app.status === 'Approved',
+                      'bg-danger': app.status === 'Rejected'
+                    }">
+                {{ app.status }}
+              </span>
+            </td>
+            <td *ngIf="isOwner" class="text-end">
+              <div *ngIf="app.status === 'Submitted' || app.status === 'Pending'" class="d-flex justify-content-end gap-1">
+                <button (click)="onUpdateStatus(app.applicationId, 'Approved')" class="btn btn-success btn-sm py-1 px-2.5">
+                  <i class="bi bi-check-lg"></i> Approve
+                </button>
+                <button (click)="onUpdateStatus(app.applicationId, 'Rejected')" class="btn btn-danger btn-sm py-1 px-2.5">
+                  <i class="bi bi-x-lg"></i> Reject
+                </button>
+              </div>
+              <span *ngIf="app.status !== 'Submitted' && app.status !== 'Pending'" class="text-muted small">Processed</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && applications.length === 0" class="text-center py-5">
+      <i class="bi bi-file-earmark-diff text-muted fs-1 mb-2"></i>
+      <h5 class="fw-bold text-dark">No Lease Applications</h5>
+      <p class="text-muted small">No active lease applications to display.</p>
+    </div>
+
+  </div>
+</div>

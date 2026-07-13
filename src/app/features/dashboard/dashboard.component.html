@@ -1,0 +1,182 @@
+<div class="animated-fade-in">
+  
+  <!-- Top Title Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 text-gradient mb-1">Workspace Overview</h1>
+      <p class="text-muted mb-0">Role: <span class="badge badge-role text-uppercase">{{ role }}</span></p>
+    </div>
+    <div class="text-muted small">
+      Last login: {{ today | date:'medium' }}
+    </div>
+  </div>
+
+  <!-- Profile Completion Banner -->
+  <div *ngIf="profileMissing" class="card border border-warning border-opacity-35 bg-warning bg-opacity-10 mb-4 rounded-3 shadow-sm p-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-exclamation-octagon-fill text-warning fs-2"></i>
+        <div>
+          <h5 class="alert-heading text-warning fw-bold mb-1">Profile Setup Required</h5>
+          <p class="mb-0 text-muted small">Your professional profile is incomplete. You must complete your profile setup to access full features.</p>
+        </div>
+      </div>
+      <a routerLink="/profile-setup" class="btn btn-warning text-dark fw-bold px-4 py-2">
+        Setup Profile Now
+      </a>
+    </div>
+  </div>
+
+  <!-- Dashboard Grid -->
+  <div class="row g-4">
+
+    <!-- ================== ADMIN DASHBOARD ================== -->
+    <ng-container *ngIf="role === 'ADMIN'">
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/all-users'" style="cursor: pointer;">
+          <i class="bi bi-people fs-1 text-primary mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ adminStats.usersCount }}</h4>
+          <p class="text-muted small mb-3">Registered Users</p>
+          <a routerLink="/all-users" class="btn btn-primary btn-sm mt-auto">Audit Users</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/account-officers'" style="cursor: pointer;">
+          <i class="bi bi-shield-check fs-1 text-success mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ adminStats.officersCount }}</h4>
+          <p class="text-muted small mb-3">Account Officers</p>
+          <a routerLink="/account-officers" class="btn btn-primary btn-sm mt-auto">Financial Auditing</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/ledger'" style="cursor: pointer;">
+          <i class="bi bi-book-half fs-1 text-danger mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">Ledger</h4>
+          <p class="text-muted small mb-3">Financial Ledger Statements</p>
+          <a routerLink="/ledger" class="btn btn-primary btn-sm mt-auto">Defaulters List</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/admin-logs'" style="cursor: pointer;">
+          <i class="bi bi-list-check fs-1 text-info mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">Audit</h4>
+          <p class="text-muted small mb-3">Audit Logs & Activity Logs</p>
+          <a routerLink="/admin-logs" class="btn btn-primary btn-sm mt-auto">View Audit Trail</a>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ================== OWNER DASHBOARD ================== -->
+    <ng-container *ngIf="role === 'OWNER'">
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/properties'" style="cursor: pointer;">
+          <i class="bi bi-houses fs-1 text-primary mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ ownerStats.propertiesCount }}</h4>
+          <p class="text-muted small mb-3">Properties Registered</p>
+          <a routerLink="/properties" class="btn btn-primary btn-sm mt-auto">Manage Properties</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/units'" style="cursor: pointer;">
+          <i class="bi bi-door-open fs-1 text-success mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ ownerStats.unitsCount }}</h4>
+          <p class="text-muted small mb-3">Rental Units</p>
+          <a routerLink="/units" class="btn btn-primary btn-sm mt-auto">Manage Units</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/applications'" style="cursor: pointer;">
+          <i class="bi bi-file-earmark-diff fs-1 text-warning mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ ownerStats.pendingAppsCount }}</h4>
+          <p class="text-muted small mb-3">Pending Applications</p>
+          <a routerLink="/applications" class="btn btn-primary btn-sm mt-auto">Review Applications</a>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/maintenance'" style="cursor: pointer;">
+          <i class="bi bi-tools fs-1 text-info mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ ownerStats.maintenanceCount }}</h4>
+          <p class="text-muted small mb-3">Maintenance Issues</p>
+          <a routerLink="/maintenance" class="btn btn-primary btn-sm mt-auto">Assign Technician</a>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ================== TENANT DASHBOARD ================== -->
+    <ng-container *ngIf="role === 'TENANT'">
+      <div class="col-md-4">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/units'" style="cursor: pointer;">
+          <i class="bi bi-search fs-1 text-primary mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">Filter & View</h4>
+          <p class="text-muted small mb-3">Browse available housing units</p>
+          <a routerLink="/units" class="btn btn-primary btn-sm mt-auto">Find Apartment</a>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/applications'" style="cursor: pointer;">
+          <i class="bi bi-file-earmark-check fs-1 text-success mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ tenantStats.applicationsCount }}</h4>
+          <p class="text-muted small mb-3">My Submitted Applications</p>
+          <a routerLink="/applications" class="btn btn-primary btn-sm mt-auto">Check Status</a>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/maintenance'" style="cursor: pointer;">
+          <i class="bi bi-tools fs-1 text-danger mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">File Request</h4>
+          <p class="text-muted small mb-3">Raise repair & maintenance issues</p>
+          <a routerLink="/maintenance" class="btn btn-primary btn-sm mt-auto">Request Repair</a>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ================== TECHNICIAN DASHBOARD ================== -->
+    <ng-container *ngIf="role === 'TECHNICIAN'">
+      <div class="col-md-6">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/maintenance'" style="cursor: pointer;">
+          <i class="bi bi-briefcase fs-1 text-primary mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">{{ technicianStats.tasksCount }}</h4>
+          <p class="text-muted small mb-3">Assigned Work Schedules</p>
+          <a routerLink="/maintenance" class="btn btn-primary btn-sm mt-auto">View Work List</a>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/maintenance'" style="cursor: pointer;">
+          <i class="bi bi-journal-text fs-1 text-success mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">Add Log</h4>
+          <p class="text-muted small mb-3">Log remarks and status changes</p>
+          <a routerLink="/maintenance" class="btn btn-primary btn-sm mt-auto">Log Maintenance Work</a>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- ================== ACCOUNT OFFICER DASHBOARD ================== -->
+    <ng-container *ngIf="role === 'ACCOUNT OFFICER'">
+      <div class="col-md-4">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/invoices'" style="cursor: pointer;">
+          <i class="bi bi-receipt-cutoff fs-1 text-primary mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">Defaulters</h4>
+          <p class="text-muted small mb-3">View overdue unpaid invoices</p>
+          <a routerLink="/invoices" class="btn btn-primary btn-sm mt-auto">Defaulters Panel</a>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/ledger'" style="cursor: pointer;">
+          <i class="bi bi-book-half fs-1 text-success mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">Financial Log</h4>
+          <p class="text-muted small mb-3">View and download financial ledger</p>
+          <a routerLink="/ledger" class="btn btn-primary btn-sm mt-auto">Financial Ledger</a>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card glass-panel p-4 h-100 text-center cursor-pointer hover-card-click" [routerLink]="'/profile-setup'" style="cursor: pointer;">
+          <i class="bi bi-gear fs-1 text-info mb-2"></i>
+          <h4 class="fw-bold mb-1 text-dark">Profile Configuration</h4>
+          <p class="text-muted small mb-3">Manage officer details</p>
+          <a routerLink="/profile-setup" class="btn btn-primary btn-sm mt-auto">Manage Profile</a>
+        </div>
+      </div>
+    </ng-container>
+
+  </div>
+</div>
