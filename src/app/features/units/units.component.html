@@ -245,14 +245,23 @@
 
         <!-- Photos Carousel/Grid -->
         <div class="d-flex flex-wrap gap-2 mb-3">
-          <div *ngFor="let photo of photos" class="position-relative border border-secondary border-opacity-15 rounded overflow-hidden" style="width: 80px; height: 80px;">
-            <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center text-muted small">
-              <i class="bi bi-image"></i>
-            </div>
-            <button (click)="onDownloadPhoto(photo.photoId)" class="btn btn-dark btn-sm position-absolute bottom-0 start-50 translate-middle-x w-100 py-0 text-white-50" style="font-size: 0.65rem; background: rgba(0,0,0,0.6);" title="Download File">
-              <i class="bi bi-download"></i>
-            </button>
-          </div>
+          
+
+         
+
+            <div *ngFor="let photo of photos" class="position-relative border border-secondary border-opacity-15 rounded overflow-hidden" style="width: 80px; height: 80px;">
+  
+  <div *ngIf="!photo.photoId" class="w-100 h-100 bg-light d-flex align-items-center justify-content-center text-muted small">
+    <i class="bi bi-image"></i>
+  </div>
+  
+  <img *ngIf="photo.photoId" 
+       [src]="getSanitizedUrl(photo.photoId)" 
+       class="position-absolute top-0 start-0 w-100 h-100" 
+       style="object-fit: cover;" 
+       alt="Property Unit Photo" />
+</div>
+
           <div *ngIf="photos.length === 0" class="text-muted small py-3">No photos uploaded for this unit.</div>
         </div>
 

@@ -171,6 +171,9 @@ export class ApiService {
     });
   }
 
+  download(photoId:number):any{
+    return this.http.get(`${this.baseUrl}/api/v1/propertyphoto/views/${photoId}`);
+  }
   // --- Technician Controller ---
   createTechnician(input: TechnicianInputDTO): Observable<TechnicianOutputDTO> {
     return this.http.post<TechnicianOutputDTO>(`${this.baseUrl}/technicians`, input);

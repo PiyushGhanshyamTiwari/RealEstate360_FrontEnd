@@ -5,6 +5,7 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { UnitInputDTO, UnitOutputDTO, PropertyOutputDTO } from '../../core/models/models';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-units',
@@ -15,7 +16,7 @@ import { CommonModule } from '@angular/common';
 })
 export class UnitsComponent implements OnInit {
   private fb = inject(FormBuilder);
-  private apiService = inject(ApiService);
+  public apiService = inject(ApiService);
   authService = inject(AuthService);
 
   units: UnitOutputDTO[] = [];
@@ -43,7 +44,7 @@ export class UnitsComponent implements OnInit {
   // Detailed view segment
   selectedUnit: UnitOutputDTO | null = null;
   newAmenityName = '';
-  photos: { photoId: number; caption?: string }[] = [];
+  photos: { photoId: number; caption?: string, imageUrl?: string }[] = [];
 
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
@@ -184,18 +185,55 @@ export class UnitsComponent implements OnInit {
     });
   }
 
-  openDetailView(unit: UnitOutputDTO): void {
-    this.selectedUnit = unit;
-    this.newAmenityName = '';
+  // openDetailView(unit: UnitOutputDTO): void {
+  //   this.selectedUnit = unit;
+  //   this.newAmenityName = '';
     
-    // Parse photos map (HashMap<Integer,String> propertyPhotos)
-    this.photos = [];
-    if (unit.propertyPhotos) {
-      this.photos = Object.keys(unit.propertyPhotos).map(photoId => ({
-        photoId: Number(photoId),
-        caption: unit.propertyPhotos?.[Number(photoId)]
-      }));
-    }
+  //   // Parse photos map (HashMap<Integer,String> propertyPhotos)
+  //   this.photos = [];
+  //   if (unit.propertyPhotos) {
+  //     this.photos = Object.keys(unit.propertyPhotos).map(photoId => ({
+  //       photoId: Number(photoId),
+  //       caption: unit.propertyPhotos?.[Number(photoId)]
+  //     }));
+  //   }
+    
+  // }
+
+  openDetailView(unit: UnitOutputDTO): void {
+  this.selectedUnit = unit;
+  this.newAmenityName = '';
+  
+  this.photos = [];
+  if (unit.propertyPhotos) {
+    this.photos = Object.keys(unit.propertyPhotos).map(photoId => ({
+      photoId: Number(photoId),
+      caption: unit.propertyPhotos?.[Number(photoId)],
+      imageUrl: '' // Add a placeholder for the object URL string
+    }));
+
+    // Fetch binary content for each photo and build the local preview URL
+    // this.photos.forEach(photo => {
+    //   this.apiService.downloadPhoto(photo.photoId).subscribe({
+    //     next: (blob: Blob) => {
+    //       // Convert the raw binary blob into a renderable browser URL string
+    //       photo.imageUrl = window.URL.createObjectURL(blob);
+    //      // console.log(photo.imageUrl)
+    //     },
+    //     error: () => {
+    //       // Fallback if image fails to load (can use a placeholder image path)
+    //       photo.imageUrl = 'assets/placeholder-image.jpg'; 
+    //     }
+    //   });
+    // });
+
+  }
+}
+
+private sanitizer = inject(DomSanitizer); // Inject it
+// Create a helper method
+  getSanitizedUrl(photoId: number): SafeUrl {
+    return this.sanitizer.bypassSecurityTrustUrl(`http://localhost:8080/api/v1/propertyphoto/views/${photoId}`);
   }
 
   closeDetailView(): void {
