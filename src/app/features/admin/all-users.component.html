@@ -32,7 +32,8 @@
             <th>Email Address</th>
             <th>Phone</th>
             <th>Role</th>
-            <th>Profile Credentials</th>
+            <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -60,8 +61,25 @@
                 {{ u.role }}
               </span>
             </td>
-            <td class="text-muted small text-truncate" style="max-width: 280px;">
-              {{ u.profileDetails || 'Base credentials only (No sub-profile)' }}
+            <td>
+              <span class="badge text-uppercase"
+                    [ngClass]="{
+                      'bg-success': u.status === 'ACTIVE' || u.status === 'APPROVED',
+                      'bg-danger': u.status === 'INACTIVE' || u.status === 'SUSPENDED',
+                      'bg-secondary': u.status !== 'ACTIVE' && u.status !== 'APPROVED' && u.status !== 'INACTIVE' && u.status !== 'SUSPENDED'
+                    }">
+                {{ u.status || 'ACTIVE' }}
+              </span>
+            </td>
+            <td>
+              <button *ngIf="u.role !== 'ADMIN'" 
+                      (click)="toggleUserStatus(u)" 
+                      class="btn btn-sm d-inline-flex align-items-center gap-1 py-1"
+                      [ngClass]="(u.status === 'ACTIVE' || u.status === 'APPROVED') ? 'btn-outline-danger' : 'btn-outline-success'">
+                <i class="bi" [ngClass]="(u.status === 'ACTIVE' || u.status === 'APPROVED') ? 'bi-person-x' : 'bi-person-check'"></i>
+                <span>{{ (u.status === 'ACTIVE' || u.status === 'APPROVED') ? 'Deactivate' : 'Activate' }}</span>
+              </button>
+              <span *ngIf="u.role === 'ADMIN'" class="text-muted small">—</span>
             </td>
           </tr>
         </tbody>

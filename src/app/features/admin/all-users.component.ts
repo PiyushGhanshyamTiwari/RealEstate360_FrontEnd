@@ -12,7 +12,7 @@ interface DisplayUser {
   emailId: string;
   phone: string;
   role: string;
-  profileDetails?: string;
+  status: string;
 }
 
 @Component({
@@ -48,24 +48,6 @@ export class AllUsersComponent implements OnInit {
         // Map users and details
         this.allUsers = data.users.map(u => {
           const roleUpper = u.role ? u.role.toUpperCase() : '';
-          let details = '';
-
-          if (roleUpper === 'TENANT') {
-            const profile = data.tenants.find(t => t.emailId === u.emailId);
-            if (profile) {
-              details = `Tenant ID: #${profile.tenantId} | Document: ${profile.documentType} | Address: ${profile.address}`;
-            }
-          } else if (roleUpper === 'ACCOUNT OFFICER') {
-            const profile = data.officers.find(o => o.emailId === u.emailId);
-            if (profile) {
-              details = `Officer ID: #${profile.officerId} | Office Full Name: ${profile.fullName} | Address: ${profile.address}`;
-            }
-          } else if (roleUpper === 'TECHNICIAN') {
-            const profile = data.technicians.find(tech => tech.userId === u.userId);
-            if (profile) {
-              details = `Technician ID: #${profile.technicianId} | Spec: ${profile.specialization} | City: ${profile.city}`;
-            }
-          }
 
           return {
             userId: u.userId,
@@ -73,7 +55,7 @@ export class AllUsersComponent implements OnInit {
             emailId: u.emailId,
             phone: u.phone,
             role: roleUpper,
-            profileDetails: details
+            status: u.status || 'ACTIVE'
           };
         });
 
@@ -92,5 +74,20 @@ export class AllUsersComponent implements OnInit {
     } else {
       this.filteredUsers = this.allUsers.filter(u => u.role === this.selectedRole);
     }
+  }
+
+  toggleUserStatus(user: DisplayUser): void {
+    if (user.role === 'ADMIN') return;
+
+    const newStatus = (user.status === 'ACTIVE' || user.status === 'APPROVED') ? 'INACTIVE' : 'ACTIVE';
+    this.apiService.updateUserStatus(user.userId, newStatus).subscribe({
+      next: () => {
+        user.status = newStatus;
+      },
+      error: (err) => {
+        console.error('Failed to toggle status', err);
+        alert(`API Error details:\n- URL attempted: ${err.url || ('PUT /api/v1/user/' + user.userId + '/' + newStatus)}\n- Status code: ${err.status || 'None'}\n- Message: ${err.message || 'Server may be down or connection refused'}`);
+      }
+    });
   }
 }

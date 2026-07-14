@@ -288,4 +288,114 @@ export class InvoicesComponent implements OnInit {
       }
     });
   }
+
+  downloadInvoicePDF(inv: InvoiceOutputDTO): void {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Pop-up blocked! Please allow pop-ups for this site to download the invoice.');
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice #${inv.invoiceId}</title>
+        <style>
+          body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 40px; color: #0f172a; background: #ffffff; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0056df; padding-bottom: 20px; margin-bottom: 40px; }
+          .logo { font-size: 28px; font-weight: 800; color: #0056df; letter-spacing: -0.02em; }
+          .title { font-size: 22px; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; }
+          .details { display: flex; justify-content: space-between; margin-bottom: 40px; }
+          .details div { width: 45%; }
+          .details h4 { margin: 0 0 10px 0; color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+          .details p { margin: 0 0 6px 0; font-size: 14px; line-height: 1.5; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+          .table th, .table td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+          .table th { background: #f8fafc; font-weight: 600; color: #475569; }
+          .total-box { display: flex; justify-content: flex-end; margin-top: 30px; }
+          .total-table { width: 280px; border-collapse: collapse; }
+          .total-table td { padding: 10px 14px; font-size: 14px; }
+          .total-table tr.grand-total { font-weight: 700; font-size: 18px; color: #0056df; border-top: 2px solid #cbd5e1; }
+          .badge-paid { background: #dcfce7; color: #15803d; padding: 5px 12px; border-radius: 50px; font-size: 12px; font-weight: 700; text-transform: uppercase; display: inline-block; border: 1px solid #bbf7d0; }
+          .footer { text-align: center; margin-top: 80px; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px; line-height: 1.5; }
+          @media print {
+            body { padding: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">RealEstate360</div>
+          <div class="title">INVOICE RECEIPT</div>
+        </div>
+        <div class="details">
+          <div>
+            <h4>Billing From</h4>
+            <p><strong>RealEstate360 Properties Ltd.</strong></p>
+            <p>99acres Tower, Sector 62</p>
+            <p>Noida, Uttar Pradesh, India</p>
+            <p>Email: billing@realestate360.com</p>
+          </div>
+          <div>
+            <h4>Invoice Info</h4>
+            <p><strong>Invoice ID:</strong> #${inv.invoiceId}</p>
+            <p><strong>Lease ID:</strong> Lease #${inv.leaseId}</p>
+            <p><strong>Generated On:</strong> ${new Date(inv.generatedAt).toLocaleString()}</p>
+            <p><strong>Status:</strong> <span class="badge-paid">Paid</span></p>
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Billing Period</th>
+              <th style="text-align: right;">Amount Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>Rental Payment Charge</strong><br>
+                <span style="font-size: 12px; color: #64748b;">Lease contract monthly installment fee</span>
+              </td>
+              <td>From ${new Date(inv.periodStart).toLocaleDateString()} to ${new Date(inv.periodEnd).toLocaleDateString()}</td>
+              <td style="text-align: right; font-weight: 700;">₹ ${inv.amountDue}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="total-box">
+          <table class="total-table">
+            <tr>
+              <td>Subtotal:</td>
+              <td style="text-align: right;">₹ ${inv.amountDue}</td>
+            </tr>
+            <tr>
+              <td>Tax (0%):</td>
+              <td style="text-align: right;">₹ 0</td>
+            </tr>
+            <tr class="grand-total">
+              <td>Total Paid:</td>
+              <td style="text-align: right;">₹ ${inv.amountDue}</td>
+            </tr>
+          </table>
+        </div>
+        <div class="footer">
+          Thank you for your prompt payment. This is a computer generated receipt, no signature required.<br>
+          RealEstate360 Property Management Platform.
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 1000);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  }
 }

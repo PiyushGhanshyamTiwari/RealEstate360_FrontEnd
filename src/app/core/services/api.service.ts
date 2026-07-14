@@ -270,4 +270,8 @@ export class ApiService {
   updateUser(userId: number, input: any): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/api/v1/user/${userId}`, input);
   }
+
+  updateUserStatus(userId: number, status: string): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/api/v1/user/${userId}/${status}`, {});
+  }
 }

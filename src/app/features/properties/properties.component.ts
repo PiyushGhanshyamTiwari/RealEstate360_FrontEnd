@@ -59,6 +59,51 @@ export class PropertiesComponent implements OnInit {
   searchCity = '';
   searchState = '';
 
+  availableCities: string[] = [];
+
+  indiaStatesData = [
+    {
+      state: 'Maharashtra',
+      cities: ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad', 'Solapur', 'Amravati', 'Kolhapur', 'Navi Mumbai']
+    },
+    {
+      state: 'Karnataka',
+      cities: ['Bangalore', 'Mysore', 'Hubli-Dharwad', 'Mangalore', 'Belgaum', 'Gulbarga', 'Davanagere', 'Bellary', 'Shimoga', 'Tumkur']
+    },
+    {
+      state: 'Tamil Nadu',
+      cities: ['Chennai', 'Coimbatore', 'Madurai', 'Trichy', 'Salem', 'Tiruppur', 'Erode', 'Vellore', 'Thoothukudi', 'Tirunelveli']
+    },
+    {
+      state: 'Delhi',
+      cities: ['New Delhi', 'Dwarka', 'Rohini', 'Saket', 'Karol Bagh', 'Connaught Place', 'South Delhi', 'Noida Extension']
+    },
+    {
+      state: 'Uttar Pradesh',
+      cities: ['Lucknow', 'Kanpur', 'Noida', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Prayagraj', 'Bareilly', 'Aligarh']
+    },
+    {
+      state: 'Telangana',
+      cities: ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar', 'Ramagundam', 'Khammam', 'Mahbubnagar', 'Nalgonda']
+    },
+    {
+      state: 'Gujarat',
+      cities: ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Gandhinagar', 'Junagadh']
+    },
+    {
+      state: 'West Bengal',
+      cities: ['Kolkata', 'Howrah', 'Darjeeling', 'Siliguri', 'Asansol', 'Durgapur', 'Kharagpur', 'Haldia']
+    },
+    {
+      state: 'Rajasthan',
+      cities: ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Bikaner', 'Ajmer', 'Bhilwara', 'Alwar']
+    },
+    {
+      state: 'Kerala',
+      cities: ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur', 'Kollam', 'Alappuzha', 'Palakkad', 'Kannur']
+    }
+  ];
+
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
     if (user) {
@@ -72,7 +117,13 @@ export class PropertiesComponent implements OnInit {
       propertyCity: ['', Validators.required],
       propertyState: ['', Validators.required],
       propertyPostalCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
-      propertyCountry: ['', Validators.required]
+      propertyCountry: ['India', Validators.required]
+    });
+
+    this.propertyForm.get('propertyState')?.valueChanges.subscribe((selectedState: string) => {
+      const stateObj = this.indiaStatesData.find(s => s.state === selectedState);
+      this.availableCities = stateObj ? stateObj.cities : [];
+      this.propertyForm.get('propertyCity')?.setValue('');
     });
 
     this.loadProperties();

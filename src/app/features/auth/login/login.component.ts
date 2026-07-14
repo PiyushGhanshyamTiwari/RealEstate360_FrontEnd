@@ -59,10 +59,12 @@ export class LoginComponent implements OnInit {
       },
       error: err => {
         this.loading = false;
-        if (err.status === 400) {
+        if (err.status === 403) {
+          this.errorMessage = 'You are inactive, kindly contact admin.';
+        } else if (err.status === 400) {
           this.errorMessage = 'Invalid email or password';
         } else {
-          this.errorMessage = err.error?.message || 'Connection failed. Please verify the backend is running.';
+          this.errorMessage = err.error?.message || err.error || 'Connection failed. Please verify the backend is running.';
         }
       }
     });

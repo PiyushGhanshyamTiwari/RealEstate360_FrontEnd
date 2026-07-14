@@ -37,17 +37,23 @@
       
       <div class="row">
         <div class="col-md-4 mb-3">
-          <label class="form-label" for="propCity">City</label>
-          <input type="text" id="propCity" formControlName="propertyCity" class="form-control" placeholder="Bangalore" [ngClass]="{ 'is-invalid': submitted && f['propertyCity'].errors }">
-          <div *ngIf="submitted && f['propertyCity'].errors" class="invalid-feedback">
-            Property City is required.
+          <label class="form-label" for="propState">State</label>
+          <select id="propState" formControlName="propertyState" class="form-select" [ngClass]="{ 'is-invalid': submitted && f['propertyState'].errors }">
+            <option value="" disabled>Select State</option>
+            <option *ngFor="let s of indiaStatesData" [value]="s.state">{{ s.state }}</option>
+          </select>
+          <div *ngIf="submitted && f['propertyState'].errors" class="invalid-feedback">
+            Property State is required.
           </div>
         </div>
         <div class="col-md-4 mb-3">
-          <label class="form-label" for="propState">State</label>
-          <input type="text" id="propState" formControlName="propertyState" class="form-control" placeholder="Karnataka" [ngClass]="{ 'is-invalid': submitted && f['propertyState'].errors }">
-          <div *ngIf="submitted && f['propertyState'].errors" class="invalid-feedback">
-            Property State is required.
+          <label class="form-label" for="propCity">City</label>
+          <select id="propCity" formControlName="propertyCity" class="form-select" [ngClass]="{ 'is-invalid': submitted && f['propertyCity'].errors }">
+            <option value="" disabled>Select City</option>
+            <option *ngFor="let c of availableCities" [value]="c">{{ c }}</option>
+          </select>
+          <div *ngIf="submitted && f['propertyCity'].errors" class="invalid-feedback">
+            Property City is required.
           </div>
         </div>
         <div class="col-md-4 mb-3">
@@ -61,7 +67,7 @@
 
       <div class="mb-4">
         <label class="form-label" for="propCountry">Country</label>
-        <input type="text" id="propCountry" formControlName="propertyCountry" class="form-control" placeholder="India" [ngClass]="{ 'is-invalid': submitted && f['propertyCountry'].errors }">
+        <input type="text" id="propCountry" formControlName="propertyCountry" class="form-control" readonly [ngClass]="{ 'is-invalid': submitted && f['propertyCountry'].errors }">
         <div *ngIf="submitted && f['propertyCountry'].errors" class="invalid-feedback">
           Property Country is required.
         </div>
