@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CommonModule } from '@angular/common';
+import DOMPurify from 'dompurify'; // Imported DOMPurify
 
 @Component({
   selector: 'app-register',
@@ -49,6 +50,7 @@ export class RegisterComponent implements OnInit {
     });
   }
 
+  // Easy access wrapper for form fields in HTML
   get f() { return this.registerForm.controls; }
 
   selectAvatar(avatarId: string): void {
@@ -59,19 +61,42 @@ export class RegisterComponent implements OnInit {
     this.submitted = true;
     this.errorMessage = '';
 
+    // Standard client-side form validation check
     if (this.registerForm.invalid) {
       return;
     }
 
+    // 1. Sanitize the user-entered name to strip out all HTML tags
+    const rawName = this.registerForm.value.userName;
+    const sanitizedName = DOMPurify.sanitize(rawName, { ALLOWED_TAGS: [] }).trim();
+
+    // 2. Safety Check: Stop execution if sanitization wiped out the name (e.g., input was pure script)
+    if (sanitizedName.length < 3) {
+      this.errorMessage = 'Please enter a valid name. HTML or script tags are not allowed.';
+      return;
+    }
+
     this.loading = true;
-    this.authService.register(this.registerForm.value).subscribe({
+
+    // 3. Construct the clean payload
+    const sanitizedRegistrationData = {
+      ...this.registerForm.value,
+      userName: sanitizedName
+    };
+
+    // 4. Submit the clean, sanitized data to the API
+    this.authService.register(sanitizedRegistrationData).subscribe({
       next: (response) => {
         this.loading = false;
-        // Save the chosen avatar key locally for this user
+        
+        // Save selected avatar mapping locally
         localStorage.setItem(`re360_avatar_${response.userId}`, this.selectedAvatar);
         localStorage.setItem(`re360_avatar_${response.emailId}`, this.selectedAvatar);
         
-        this.router.navigate(['/login'], { queryParams: { registered: 'true', email: response.emailId } });
+        // Redirect to login with success parameters
+        this.router.navigate(['/login'], { 
+          queryParams: { registered: 'true', email: response.emailId } 
+        });
       },
       error: err => {
         this.loading = false;

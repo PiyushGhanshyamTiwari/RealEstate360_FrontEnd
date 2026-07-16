@@ -72,14 +72,14 @@
 
       <div class="row mb-4">
         <div class="col-md-6 mb-3 mb-md-0">
-          <label class="form-label" for="rent">Monthly Rent (USD)</label>
+          <label class="form-label" for="rent">Monthly Rent (INR)</label>
           <input type="number" id="rent" formControlName="rentAmount" class="form-control" placeholder="e.g. 1500" [ngClass]="{ 'is-invalid': submitted && fu['rentAmount'].errors }">
           <div *ngIf="submitted && fu['rentAmount'].errors" class="invalid-feedback">
             Rent must be a positive number.
           </div>
         </div>
         <div class="col-md-6">
-          <label class="form-label" for="deposit">Security Deposit (USD)</label>
+          <label class="form-label" for="deposit">Security Deposit (INR)</label>
           <input type="number" id="deposit" formControlName="depositAmount" class="form-control" placeholder="e.g. 3000" [ngClass]="{ 'is-invalid': submitted && fu['depositAmount'].errors }">
           <div *ngIf="submitted && fu['depositAmount'].errors" class="invalid-feedback">
             Deposit must be a positive number.

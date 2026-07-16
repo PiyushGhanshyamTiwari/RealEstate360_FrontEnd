@@ -14,16 +14,16 @@
 }
 
 /* ============================================================
-   CSS CUSTOM PROPERTIES (99acres.com Theme)
+   CSS CUSTOM PROPERTIES 
    ============================================================ */
 :root {
-  --primary-color: #0056df;      /* 99acres Electric Blue */
+  --primary-color: #0056df;      /* Electric Blue */
   --primary-hover: #0043b3;      /* Darker Blue */
-  --secondary-color: #ff5a00;    /* 99acres Accent Orange */
+  --secondary-color: #ff5a00;    /* Accent Orange */
   --secondary-hover: #e04f00;    /* Darker Orange */
   --bg-color: #f5f7fa;           /* Cool soft grey background */
   --card-bg: #ffffff;            /* Pure White */
-  --sidebar-bg: #092244;         /* 99acres Deep Navy Header/Sidebar */
+  --sidebar-bg: #092244;         /* Deep Navy Header/Sidebar */
   --border-color: #dfe4ec;       /* Crisp light border */
   --text-primary: #092244;       /* Deep Navy text */
   --text-secondary: #42526e;     /* Cool grey text */

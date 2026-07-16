@@ -213,21 +213,6 @@ export class UnitsComponent implements OnInit {
     });
   }
 
-  // openDetailView(unit: UnitOutputDTO): void {
-  //   this.selectedUnit = unit;
-  //   this.newAmenityName = '';
-    
-  //   // Parse photos map (HashMap<Integer,String> propertyPhotos)
-  //   this.photos = [];
-  //   if (unit.propertyPhotos) {
-  //     this.photos = Object.keys(unit.propertyPhotos).map(photoId => ({
-  //       photoId: Number(photoId),
-  //       caption: unit.propertyPhotos?.[Number(photoId)]
-  //     }));
-  //   }
-    
-  // }
-
   openDetailView(unit: UnitOutputDTO): void {
   this.selectedUnit = unit;
   this.newAmenityName = '';
