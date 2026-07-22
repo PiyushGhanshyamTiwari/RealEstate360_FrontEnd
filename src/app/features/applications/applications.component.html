@@ -20,34 +20,67 @@
     <h4 class="fw-bold mb-3 text-gradient">Submit Lease Application</h4>
     <form [formGroup]="applyForm" (ngSubmit)="onApplySubmit()">
       <div class="row">
+        
+        <!-- Select Unit -->
         <div class="col-md-4 mb-3">
           <label class="form-label" for="appUnit">Select Unit ID</label>
-          <select id="appUnit" formControlName="unitId" class="form-select" [ngClass]="{ 'is-invalid': submitted && fa['unitId'].errors }">
+          <select id="appUnit" 
+                  formControlName="unitId" 
+                  (change)="onUnitOrDateSelect()"
+                  class="form-select" 
+                  [ngClass]="{ 'is-invalid': submitted && fa['unitId'].errors }">
             <option value="" disabled selected>Choose unit...</option>
             <option *ngFor="let u of availableUnits" [value]="u.unitId">
               Unit {{ u.unitId }} - {{ u.type }} at {{ u.propertyName }} (₹ {{ u.rentAmount }}/mo)
             </option>
           </select>
-          <div *ngIf="submitted && fa['unitId'].errors" class="invalid-feedback">
+          <div *ngIf="submitted && fa['unitId'].errors?.['required']" class="invalid-feedback">
             Unit selection is required.
           </div>
         </div>
         
+        <!-- Start Date -->
         <div class="col-md-4 mb-3">
           <label class="form-label" for="start">Lease Start Date</label>
-          <input type="date" id="start" formControlName="startDate" class="form-control" [ngClass]="{ 'is-invalid': submitted && fa['startDate'].errors }">
-          <div *ngIf="submitted && fa['startDate'].errors" class="invalid-feedback">
+          <input type="date" 
+                 id="start" 
+                 formControlName="startDate" 
+                 (change)="onUnitOrDateSelect()"
+                 [min]="selectedUnitAvailableDate"
+                 class="form-control" 
+                 [ngClass]="{ 'is-invalid': submitted && (fa['startDate'].errors || applyForm.errors?.['startDateBeforeAvailable']) }">
+          <small *ngIf="selectedUnitAvailableDate" class="text-muted d-block mt-1">
+            Available from: {{ selectedUnitAvailableDate | date:'mediumDate' }}
+          </small>
+          <div *ngIf="submitted && fa['startDate'].errors?.['required']" class="invalid-feedback">
             Start date is required.
+          </div>
+          <div *ngIf="submitted && applyForm.errors?.['startDateBeforeAvailable']" class="invalid-feedback d-block">
+            Start date must be on or after the unit's available date ({{ selectedUnitAvailableDate | date:'mediumDate' }}).
           </div>
         </div>
 
+        <!-- End Date -->
         <div class="col-md-4 mb-3">
           <label class="form-label" for="end">Lease End Date</label>
-          <input type="date" id="end" formControlName="endDate" class="form-control" [ngClass]="{ 'is-invalid': submitted && fa['endDate'].errors }">
-          <div *ngIf="submitted && fa['endDate'].errors" class="invalid-feedback">
+          <input type="date" 
+                 id="end" 
+                 formControlName="endDate" 
+                 [min]="fa['startDate'].value"
+                 [max]="maxEndDateConstraint"
+                 class="form-control" 
+                 [ngClass]="{ 'is-invalid': submitted && (fa['endDate'].errors || applyForm.errors?.['endDateBeforeStart'] || applyForm.errors?.['exceedsOneYear']) }">
+          <div *ngIf="submitted && fa['endDate'].errors?.['required']" class="invalid-feedback">
             End date is required.
           </div>
+          <div *ngIf="submitted && applyForm.errors?.['endDateBeforeStart']" class="invalid-feedback d-block">
+            End date must be after the start date.
+          </div>
+          <div *ngIf="submitted && applyForm.errors?.['exceedsOneYear']" class="invalid-feedback d-block">
+            Lease duration cannot exceed 1 year from the start date.
+          </div>
         </div>
+
       </div>
 
       <button type="submit" [disabled]="submitting" class="btn btn-primary px-5 me-2">
@@ -75,6 +108,7 @@
       <button (click)="loadOwnerApplications()" class="btn btn-primary py-2 px-4">Load Applications</button>
     </div>
 
+    <!-- Spinner -->
     <div *ngIf="loading" class="text-center py-5">
       <div class="spinner-border text-primary" role="status"></div>
       <p class="text-muted mt-2">Loading applications...</p>

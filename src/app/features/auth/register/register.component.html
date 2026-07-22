@@ -22,8 +22,8 @@
           formControlName="userName"
           class="form-control"
           placeholder="John Doe"
-          [ngClass]="{ 'is-invalid': submitted && f['userName'].errors }">
-        <div *ngIf="submitted && f['userName'].errors" class="invalid-feedback">
+          [ngClass]="{ 'is-invalid': (submitted || f['userName'].touched || f['userName'].dirty) && f['userName'].errors }">
+        <div *ngIf="(submitted || f['userName'].touched || f['userName'].dirty) && f['userName'].errors" class="invalid-feedback">
           <span *ngIf="f['userName'].errors['required']">Full name is required.</span>
           <span *ngIf="f['userName'].errors['minlength']">Name must be at least 3 characters.</span>
           <span *ngIf="f['userName'].errors['maxlength']">Name cannot exceed 50 characters.</span>
@@ -39,8 +39,8 @@
           formControlName="emailId"
           class="form-control"
           placeholder="john@example.com"
-          [ngClass]="{ 'is-invalid': submitted && f['emailId'].errors }">
-        <div *ngIf="submitted && f['emailId'].errors" class="invalid-feedback">
+          [ngClass]="{ 'is-invalid': (submitted || f['emailId'].touched || f['emailId'].dirty) && f['emailId'].errors }">
+        <div *ngIf="(submitted || f['emailId'].touched || f['emailId'].dirty) && f['emailId'].errors" class="invalid-feedback">
           <span *ngIf="f['emailId'].errors['required']">Email is required.</span>
           <span *ngIf="f['emailId'].errors['email']">Enter a valid email address.</span>
         </div>
@@ -55,8 +55,8 @@
           formControlName="phone"
           class="form-control"
           placeholder="10-digit number"
-          [ngClass]="{ 'is-invalid': submitted && f['phone'].errors }">
-        <div *ngIf="submitted && f['phone'].errors" class="invalid-feedback">
+          [ngClass]="{ 'is-invalid': (submitted || f['phone'].touched || f['phone'].dirty) && f['phone'].errors }">
+        <div *ngIf="(submitted || f['phone'].touched || f['phone'].dirty) && f['phone'].errors" class="invalid-feedback">
           <span *ngIf="f['phone'].errors['required']">Phone number is required.</span>
           <span *ngIf="f['phone'].errors['pattern']">Phone number must be exactly 10 digits.</span>
         </div>
@@ -66,14 +66,14 @@
       <div class="mb-3">
         <label for="role" class="form-label">Desired Account Role</label>
         <select id="role" formControlName="role" class="form-select"
-                [ngClass]="{ 'is-invalid': submitted && f['role'].errors }">
+                [ngClass]="{ 'is-invalid': (submitted || f['role'].touched || f['role'].dirty) && f['role'].errors }">
           <option value="" disabled selected>Select a role...</option>
           <option value="owner">Owner / Property Manager</option>
           <option value="tenant">Tenant</option>
           <option value="technician">Technician</option>
           <option value="account officer">Account Officer</option>
         </select>
-        <div *ngIf="submitted && f['role'].errors" class="invalid-feedback">
+        <div *ngIf="(submitted || f['role'].touched || f['role'].dirty) && f['role'].errors" class="invalid-feedback">
           <span *ngIf="f['role'].errors['required']">Please select a role.</span>
         </div>
       </div>
@@ -87,8 +87,8 @@
           formControlName="password"
           class="form-control"
           placeholder="5 to 20 characters"
-          [ngClass]="{ 'is-invalid': submitted && f['password'].errors }">
-        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
+          [ngClass]="{ 'is-invalid': (submitted || f['password'].touched || f['password'].dirty) && f['password'].errors }">
+        <div *ngIf="(submitted || f['password'].touched || f['password'].dirty) && f['password'].errors" class="invalid-feedback">
           <span *ngIf="f['password'].errors['required']">Password is required.</span>
           <span *ngIf="f['password'].errors['minlength']">Password must be at least 5 characters.</span>
           <span *ngIf="f['password'].errors['maxlength']">Password cannot exceed 20 characters.</span>

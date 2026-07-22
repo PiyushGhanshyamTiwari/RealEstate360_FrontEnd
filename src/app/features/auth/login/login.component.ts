@@ -47,6 +47,9 @@ export class LoginComponent implements OnInit {
     this.errorMessage = '';
     this.sessionExpired = false;
 
+    // Mark all fields as touched to trigger validation UI for unvisited fields
+    this.loginForm.markAllAsTouched();
+
     if (this.loginForm.invalid) {
       return;
     }

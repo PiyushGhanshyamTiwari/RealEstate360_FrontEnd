@@ -2,11 +2,18 @@ import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { InvoiceOutputDTO, InvoiceDefaultersOutputDto, LeaseOutputDTO } from '../../core/models/models';
+import { InvoiceOutputDTO, InvoiceDefaultersOutputDto, LeaseOutputDTO, UnitOutputDTO } from '../../core/models/models';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+
+interface TenantLeaseOption {
+  leaseId: number;
+  unitId?: number;
+  unitType?: string;
+  rentAmount?: number;
+}
 
 @Component({
   selector: 'app-invoices',
@@ -24,6 +31,7 @@ export class InvoicesComponent implements OnInit {
   defaulters: InvoiceDefaultersOutputDto[] = [];
   searchLeaseId = '';
   leases: LeaseOutputDTO[] = [];
+  tenantLeaseOptions: TenantLeaseOption[] = [];
 
   // Pagination helper fields
   pageInvoices = 1;
@@ -92,7 +100,9 @@ export class InvoicesComponent implements OnInit {
         this.resolveOfficerProfileId();
       }
 
-      if (!this.isTenant) {
+      if (this.isTenant) {
+        this.loadTenantLeasesAndInvoices();
+      } else {
         this.loadLeasesForDropdown();
       }
     }
@@ -101,8 +111,6 @@ export class InvoicesComponent implements OnInit {
       if (params['leaseId']) {
         this.searchLeaseId = params['leaseId'];
         this.onSearchInvoices();
-      } else if (this.isTenant) {
-        this.loadTenantInvoicesAutomatically();
       }
     });
   }
@@ -119,7 +127,6 @@ export class InvoicesComponent implements OnInit {
         next: (data) => {
           this.leases = data;
           this.loadingLeases = false;
-          // Auto-select first lease if nothing searched yet
           if (this.leases.length > 0 && !this.searchLeaseId) {
             this.searchLeaseId = this.leases[0].leaseId.toString();
             this.onSearchInvoices();
@@ -135,7 +142,6 @@ export class InvoicesComponent implements OnInit {
         next: (data) => {
           this.leases = data;
           this.loadingLeases = false;
-          // Auto-select first lease if nothing searched yet
           if (this.leases.length > 0 && !this.searchLeaseId) {
             this.searchLeaseId = this.leases[0].leaseId.toString();
             this.onSearchInvoices();
@@ -149,6 +155,66 @@ export class InvoicesComponent implements OnInit {
     }
   }
 
+  loadTenantLeasesAndInvoices(): void {
+    this.loadingLeases = true;
+    this.loadingInvoices = true;
+    this.tenantLeaseOptions = [];
+
+    this.apiService.getAllUnits().subscribe({
+      next: (units) => {
+        const unitsMap = new Map<number, UnitOutputDTO>();
+        units.forEach(u => unitsMap.set(u.unitId, u));
+
+        const requests = [];
+        for (let i = 1; i <= 50; i++) {
+          requests.push(this.apiService.listInvoiceWithLeaseId(i).pipe(catchError(() => of([]))));
+        }
+
+        forkJoin(requests).subscribe({
+          next: (results) => {
+            const options: TenantLeaseOption[] = [];
+            results.forEach((list, index) => {
+              const leaseId = index + 1;
+              if (list && list.length > 0) {
+                const isMine = list.some(inv => inv.tenantId === this.tenantProfileId || inv.tenantId === 1);
+                if (isMine) {
+                  const matchedUnit = unitsMap.get(leaseId);
+                  options.push({
+                    leaseId: leaseId,
+                    unitId: matchedUnit?.unitId || leaseId,
+                    unitType: matchedUnit?.type || 'Unit',
+                    rentAmount: list[0]?.amountDue || 0
+                  });
+                }
+              }
+            });
+
+            this.tenantLeaseOptions = options;
+            this.loadingLeases = false;
+
+            if (this.tenantLeaseOptions.length > 0 && !this.searchLeaseId) {
+              this.searchLeaseId = this.tenantLeaseOptions[0].leaseId.toString();
+            }
+            
+            if (this.searchLeaseId) {
+              this.onSearchInvoices();
+            } else {
+              this.loadingInvoices = false;
+            }
+          },
+          error: () => {
+            this.loadingLeases = false;
+            this.loadingInvoices = false;
+          }
+        });
+      },
+      error: () => {
+        this.loadingLeases = false;
+        this.loadingInvoices = false;
+      }
+    });
+  }
+
   resolveOfficerProfileId(): void {
     const user = this.authService.currentUserValue;
     if (!user) return;
@@ -159,7 +225,6 @@ export class InvoicesComponent implements OnInit {
       return;
     }
 
-    // Silent background scan to resolve the officer ID matching user emailId
     const requests = [];
     for (let i = 1; i <= 20; i++) {
       requests.push(this.apiService.getOfficerById(i).pipe(catchError(() => of(null))));
@@ -172,40 +237,7 @@ export class InvoicesComponent implements OnInit {
         localStorage.setItem(`re360_officer_id_${user.userId}`, this.verificationOfficerId);
         localStorage.setItem(`re360_officer_profile_registered_${user.userId}`, 'true');
       } else {
-        // Fallback to user ID in case of test data matching
         this.verificationOfficerId = user.userId.toString();
-      }
-    });
-  }
-
-  loadTenantInvoicesAutomatically(): void {
-    this.loadingInvoices = true;
-    this.invoices = [];
-
-    // Scan first 50 leaseId values in parallel
-    const requests = [];
-    for (let i = 1; i <= 50; i++) {
-      requests.push(this.apiService.listInvoiceWithLeaseId(i).pipe(catchError(() => of([]))));
-    }
-
-    forkJoin(requests).subscribe({
-      next: (results) => {
-        const filteredInvoices: InvoiceOutputDTO[] = [];
-        results.forEach((list) => {
-          if (list && list.length > 0) {
-            list.forEach(inv => {
-              if (inv.tenantId === this.tenantProfileId || inv.tenantId === 1) {
-                filteredInvoices.push(inv);
-              }
-            });
-          }
-        });
-        this.invoices = filteredInvoices;
-        this.pageInvoices = 1;
-        this.loadingInvoices = false;
-      },
-      error: () => {
-        this.loadingInvoices = false;
       }
     });
   }
@@ -267,6 +299,7 @@ export class InvoicesComponent implements OnInit {
 
   confirmPayment(): void {
     if (!this.activeInvoiceForPayment || !this.verificationOfficerId) return;
+    
     const invoiceId = this.activeInvoiceForPayment.invoiceId;
     const officerId = Number(this.verificationOfficerId);
 
@@ -275,11 +308,9 @@ export class InvoicesComponent implements OnInit {
         this.successMessage = `Invoice #${invoiceId} successfully marked PAID! Ledger entry created.`;
         setTimeout(() => this.successMessage = '', 4000);
         this.closePaymentModal();
-        if (this.isTenant) {
-          this.loadTenantInvoicesAutomatically();
-        } else {
-          this.onSearchInvoices();
-        }
+        
+        // Re-fetch from the database to get the newly updated timestamp saved by Spring Boot
+        this.onSearchInvoices();
       },
       error: (err) => {
         this.errorMessage = err.error?.message || 'Payment processing failed.';
@@ -295,6 +326,22 @@ export class InvoicesComponent implements OnInit {
       alert('Pop-up blocked! Please allow pop-ups for this site to download the invoice.');
       return;
     }
+
+    // Retrieve unit type from lease option list or fallback
+    const matchedOption = this.tenantLeaseOptions.find(o => o.leaseId === inv.leaseId);
+    const unitType = (matchedOption?.unitType || 'VILLA').toUpperCase();
+
+    // Calculate GST percentage matching Backend getGstPercent logic
+    let gstPercent = 12.0;
+    if (unitType === 'APARTMENT' || unitType === 'STUDIO') {
+      gstPercent = 5.0;
+    } else if (unitType === 'VILLA' || unitType === 'OFFICE' || unitType === 'COMMERCIAL') {
+      gstPercent = 12.0;
+    }
+
+    const baseRent = inv.amountDue;
+    const gstAmount = (baseRent * gstPercent) / 100;
+    const totalPaid = baseRent + gstAmount;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -314,7 +361,7 @@ export class InvoicesComponent implements OnInit {
           .table th, .table td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
           .table th { background: #f8fafc; font-weight: 600; color: #475569; }
           .total-box { display: flex; justify-content: flex-end; margin-top: 30px; }
-          .total-table { width: 280px; border-collapse: collapse; }
+          .total-table { width: 320px; border-collapse: collapse; }
           .total-table td { padding: 10px 14px; font-size: 14px; }
           .total-table tr.grand-total { font-weight: 700; font-size: 18px; color: #0056df; border-top: 2px solid #cbd5e1; }
           .badge-paid { background: #dcfce7; color: #15803d; padding: 5px 12px; border-radius: 50px; font-size: 12px; font-weight: 700; text-transform: uppercase; display: inline-block; border: 1px solid #bbf7d0; }
@@ -341,7 +388,7 @@ export class InvoicesComponent implements OnInit {
             <h4>Invoice Info</h4>
             <p><strong>Invoice ID:</strong> #${inv.invoiceId}</p>
             <p><strong>Lease ID:</strong> Lease #${inv.leaseId}</p>
-            <p><strong>Generated On:</strong> ${new Date(inv.generatedAt).toLocaleString()}</p>
+            <p><strong>Paid Date:</strong> ${new Date(inv.generatedAt).toLocaleString()}</p>
             <p><strong>Status:</strong> <span class="badge-paid">Paid</span></p>
           </div>
         </div>
@@ -350,33 +397,33 @@ export class InvoicesComponent implements OnInit {
             <tr>
               <th>Description</th>
               <th>Billing Period</th>
-              <th style="text-align: right;">Amount Paid</th>
+              <th style="text-align: right;">Base Rent</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>
-                <strong>Rental Payment Charge</strong><br>
+                <strong>Rental Payment Charge (${unitType})</strong><br>
                 <span style="font-size: 12px; color: #64748b;">Lease contract monthly installment fee</span>
               </td>
               <td>From ${new Date(inv.periodStart).toLocaleDateString()} to ${new Date(inv.periodEnd).toLocaleDateString()}</td>
-              <td style="text-align: right; font-weight: 700;">₹ ${inv.amountDue}</td>
+              <td style="text-align: right; font-weight: 700;">₹ ${baseRent.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
         <div class="total-box">
           <table class="total-table">
             <tr>
-              <td>Subtotal:</td>
-              <td style="text-align: right;">₹ ${inv.amountDue}</td>
+              <td>Subtotal (Base Rent):</td>
+              <td style="text-align: right;">₹ ${baseRent.toFixed(2)}</td>
             </tr>
             <tr>
-              <td>Tax (0%):</td>
-              <td style="text-align: right;">₹ 0</td>
+              <td>GST (${gstPercent}%):</td>
+              <td style="text-align: right;">₹ ${gstAmount.toFixed(2)}</td>
             </tr>
             <tr class="grand-total">
               <td>Total Paid:</td>
-              <td style="text-align: right;">₹ ${inv.amountDue}</td>
+              <td style="text-align: right;">₹ ${totalPaid.toFixed(2)}</td>
             </tr>
           </table>
         </div>

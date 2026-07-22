@@ -29,9 +29,9 @@
             formControlName="emailId"
             class="form-control"
             placeholder="name@example.com"
-            [ngClass]="{ 'is-invalid': submitted && f['emailId'].errors }">
+            [ngClass]="{ 'is-invalid': (submitted || f['emailId'].touched || f['emailId'].dirty) && f['emailId'].errors }">
         </div>
-        <div *ngIf="submitted && f['emailId'].errors" class="invalid-feedback d-block">
+        <div *ngIf="(submitted || f['emailId'].touched || f['emailId'].dirty) && f['emailId'].errors" class="invalid-feedback d-block">
           <span *ngIf="f['emailId'].errors['required']">Email is required</span>
           <span *ngIf="f['emailId'].errors['email']">Enter a valid email address</span>
         </div>
@@ -50,9 +50,9 @@
             formControlName="password"
             class="form-control"
             placeholder="Enter password"
-            [ngClass]="{ 'is-invalid': submitted && f['password'].errors }">
+            [ngClass]="{ 'is-invalid': (submitted || f['password'].touched || f['password'].dirty) && f['password'].errors }">
         </div>
-        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback d-block">
+        <div *ngIf="(submitted || f['password'].touched || f['password'].dirty) && f['password'].errors" class="invalid-feedback d-block">
           <span *ngIf="f['password'].errors['required']">Password is required</span>
         </div>
       </div>

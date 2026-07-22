@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -23,6 +23,10 @@ export class ApplicationsComponent implements OnInit {
   availableUnits: UnitOutputDTO[] = [];
   ownerUnits: UnitOutputDTO[] = [];
   loading = true;
+
+  // Track selected unit available date for UI constraints and messages
+  selectedUnitAvailableDate: string | null = null;
+  maxEndDateConstraint: string | null = null;
 
   // Pagination helper fields
   page = 1;
@@ -50,6 +54,7 @@ export class ApplicationsComponent implements OnInit {
     }
     return pages;
   }
+
   isTenant = false;
   isOwner = false;
   userId: number | null = null;
@@ -71,11 +76,12 @@ export class ApplicationsComponent implements OnInit {
       this.isOwner = user.role.toUpperCase() === 'OWNER';
     }
 
+    // Initialize Reactive Form
     this.applyForm = this.fb.group({
       unitId: ['', Validators.required],
       startDate: ['', Validators.required],
       endDate: ['', Validators.required]
-    });
+    }, { validators: this.dateRangeValidator.bind(this) });
 
     const prefilledUnitId = this.route.snapshot.queryParams['applyUnitId'];
     if (prefilledUnitId) {
@@ -95,6 +101,88 @@ export class ApplicationsComponent implements OnInit {
 
   get fa() { return this.applyForm.controls; }
 
+  // Helper method to convert ISO strings, Date objects, or backend Arrays [YYYY, MM, DD] to "YYYY-MM-DD"
+  private formatDateToISO(dateVal: any): string | null {
+    if (!dateVal) return null;
+    if (Array.isArray(dateVal)) {
+      const [year, month, day] = dateVal;
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    if (typeof dateVal === 'string') {
+      return dateVal.split('T')[0];
+    }
+    const d = new Date(dateVal);
+    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+  }
+
+  // Safe Form-Level Custom Validator (Returns errors directly to avoid infinite loops)
+  dateRangeValidator(group: AbstractControl): ValidationErrors | null {
+    const unitId = group.get('unitId')?.value;
+    const startDateVal = group.get('startDate')?.value;
+    const endDateVal = group.get('endDate')?.value;
+
+    if (!unitId || !startDateVal) {
+      return null;
+    }
+
+    const errors: ValidationErrors = {};
+    const selectedUnit = this.availableUnits?.find(u => u.unitId === Number(unitId));
+
+    // 1. Validate Start Date >= Unit availableFrom Date
+    if (selectedUnit && selectedUnit.availableFrom && startDateVal) {
+      const availIso = this.formatDateToISO(selectedUnit.availableFrom);
+      if (availIso) {
+        const unitAvailDate = new Date(availIso);
+        const startDate = new Date(startDateVal);
+
+        unitAvailDate.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+
+        if (startDate < unitAvailDate) {
+          errors['startDateBeforeAvailable'] = true;
+        }
+      }
+    }
+
+    // 2. Validate End Date range
+    if (startDateVal && endDateVal) {
+      const startDate = new Date(startDateVal);
+      const endDate = new Date(endDateVal);
+
+      if (endDate <= startDate) {
+        errors['endDateBeforeStart'] = true;
+      } else {
+        const maxEndDate = new Date(startDate);
+        maxEndDate.setFullYear(maxEndDate.getFullYear() + 1);
+
+        if (endDate > maxEndDate) {
+          errors['exceedsOneYear'] = true;
+        }
+      }
+    }
+
+    return Object.keys(errors).length > 0 ? errors : null;
+  }
+
+  // Helper called on UI change to set HTML date constraints
+  onUnitOrDateSelect(): void {
+    const unitId = this.applyForm?.get('unitId')?.value;
+    const startDateVal = this.applyForm?.get('startDate')?.value;
+
+    const selectedUnit = this.availableUnits?.find(u => u.unitId === Number(unitId));
+    this.selectedUnitAvailableDate = selectedUnit?.availableFrom ? this.formatDateToISO(selectedUnit.availableFrom) : null;
+
+    if (startDateVal) {
+      const start = new Date(startDateVal);
+      if (!isNaN(start.getTime())) {
+        start.setFullYear(start.getFullYear() + 1);
+        this.maxEndDateConstraint = start.toISOString().split('T')[0];
+      }
+    } else {
+      this.maxEndDateConstraint = null;
+    }
+  }
+
   toggleApplyForm(): void {
     this.showApplyForm = !this.showApplyForm;
     this.errorMessage = '';
@@ -106,31 +194,52 @@ export class ApplicationsComponent implements OnInit {
   }
 
   loadAvailableUnits(): void {
-    this.apiService.filterUnits(undefined, undefined, undefined, undefined, undefined, undefined, 'AVAILABLE').subscribe(data => {
-      this.availableUnits = data;
+    this.apiService.filterUnits(undefined, undefined, undefined, undefined, undefined, undefined, 'AVAILABLE').subscribe({
+      next: (data) => {
+        this.availableUnits = data || [];
+        if (this.applyForm.get('unitId')?.value) {
+          this.onUnitOrDateSelect();
+        }
+      },
+      error: () => {
+        this.availableUnits = [];
+      }
     });
   }
 
   loadOwnerUnits(): void {
-    if (!this.userId) return;
-    this.apiService.findPropertyByOwnerId(this.userId).subscribe(properties => {
-      this.apiService.getAllUnits().subscribe(units => {
-        this.ownerUnits = units.filter(u => properties.some(p => p.propertyId === u.propertyId));
-        this.loading = false;
-      });
+    if (!this.userId) {
+      this.loading = false;
+      return;
+    }
+    this.apiService.findPropertyByOwnerId(this.userId).subscribe({
+      next: (properties) => {
+        this.apiService.getAllUnits().subscribe({
+          next: (units) => {
+            this.ownerUnits = units.filter(u => properties.some(p => p.propertyId === u.propertyId));
+            this.loading = false;
+          },
+          error: () => { this.loading = false; }
+        });
+      },
+      error: () => { this.loading = false; }
     });
   }
 
   loadTenantApplications(): void {
-    if (!this.userId) return;
+    if (!this.userId) {
+      this.loading = false;
+      return;
+    }
     this.loading = true;
     this.apiService.getApplicationByTenantId(this.userId).subscribe({
       next: (data) => {
-        this.applications = data;
+        this.applications = data || [];
         this.page = 1;
         this.loading = false;
       },
       error: () => {
+        this.applications = [];
         this.loading = false;
       }
     });
@@ -138,19 +247,27 @@ export class ApplicationsComponent implements OnInit {
 
   loadAllApplications(): void {
     this.loading = true;
-    this.apiService.getAllUnits().subscribe(units => {
-      if (units.length > 0) {
-        this.apiService.getApplicationsByUnitId(units[0].unitId).subscribe({
-          next: (data) => {
-            this.applications = data;
-            this.page = 1;
-            this.loading = false;
-          },
-          error: () => {
-            this.loading = false;
-          }
-        });
-      } else {
+    this.apiService.getAllUnits().subscribe({
+      next: (units) => {
+        if (units && units.length > 0) {
+          this.apiService.getApplicationsByUnitId(units[0].unitId).subscribe({
+            next: (data) => {
+              this.applications = data || [];
+              this.page = 1;
+              this.loading = false;
+            },
+            error: () => {
+              this.applications = [];
+              this.loading = false;
+            }
+          });
+        } else {
+          this.applications = [];
+          this.loading = false;
+        }
+      },
+      error: () => {
+        this.applications = [];
         this.loading = false;
       }
     });
@@ -160,11 +277,11 @@ export class ApplicationsComponent implements OnInit {
     if (!this.ownerSelectedUnitId) return;
     this.loading = true;
     this.apiService.getApplicationsByUnitId(Number(this.ownerSelectedUnitId)).subscribe({
-        next: (data) => {
-          this.applications = data;
-          this.page = 1;
-          this.loading = false;
-        },
+      next: (data) => {
+        this.applications = data || [];
+        this.page = 1;
+        this.loading = false;
+      },
       error: () => {
         this.applications = [];
         this.loading = false;
@@ -196,6 +313,7 @@ export class ApplicationsComponent implements OnInit {
         this.successMessage = 'Lease application successfully submitted!';
         this.applyForm.reset();
         this.submitted = false;
+        this.loadTenantApplications();
       },
       error: (err) => {
         this.submitting = false;

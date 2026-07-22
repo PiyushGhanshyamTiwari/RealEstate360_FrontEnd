@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CommonModule } from '@angular/common';
-import DOMPurify from 'dompurify'; // Imported DOMPurify
+import DOMPurify from 'dompurify';
 
 @Component({
   selector: 'app-register',
@@ -50,8 +50,10 @@ export class RegisterComponent implements OnInit {
     });
   }
 
-  // Easy access wrapper for form fields in HTML
-  get f() { return this.registerForm.controls; }
+  // Easy access wrapper for form controls in HTML
+  get f() { 
+    return this.registerForm.controls; 
+  }
 
   selectAvatar(avatarId: string): void {
     this.selectedAvatar = avatarId;
@@ -60,6 +62,9 @@ export class RegisterComponent implements OnInit {
   onSubmit(): void {
     this.submitted = true;
     this.errorMessage = '';
+
+    // Mark all controls as touched on submit so dirty/touched checks trigger for unvisited invalid inputs
+    this.registerForm.markAllAsTouched();
 
     // Standard client-side form validation check
     if (this.registerForm.invalid) {

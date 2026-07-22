@@ -42,15 +42,34 @@
       <ng-container *ngIf="role === 'TENANT'">
         <div class="col-12">
           <span class="text-muted d-block small">Address</span>
-          <span class="text-dark">{{ existingProfile.address }}</span>
+          <span class="text-dark">{{ existingProfile.address || 'Address Not Provided' }}</span>
         </div>
+
         <div class="col-sm-6">
           <span class="text-muted d-block small">Verification Document</span>
-          <span class="badge bg-secondary text-uppercase">{{ existingProfile.documentType }}</span>
+          <span class="badge text-uppercase" [ngClass]="existingProfile.documentType ? 'bg-secondary' : 'bg-warning text-dark'">
+            {{ existingProfile.documentType || 'Not Provided' }}
+          </span>
         </div>
+
         <div class="col-sm-6">
           <span class="text-muted d-block small">Document File Reference</span>
-          <span class="text-secondary text-truncate d-block">{{ existingProfile.documentFileRef }}</span>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <span class="text-dark fw-medium text-truncate" style="max-width: 200px;">
+              <i class="bi me-1" [ngClass]="existingProfile.documentFileRef ? 'bi-file-earmark-text text-primary' : 'bi-exclamation-circle text-warning'"></i>
+              {{ existingProfile.documentFileRef || 'Document Not Uploaded' }}
+            </span>
+
+            <!-- Hide view button if document is not uploaded -->
+            <button 
+              *ngIf="selectedFile || existingProfile.documentFileRef"
+              type="button"
+              (click)="viewUploadedDocument()" 
+              class="btn btn-sm btn-outline-info py-0 px-2 d-inline-flex align-items-center gap-1" 
+              title="View Reference Details">
+              <i class="bi bi-eye-fill"></i> View
+            </button>
+          </div>
         </div>
       </ng-container>
 
@@ -82,13 +101,11 @@
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-4 border-top border-secondary border-opacity-10 pt-3">
-      <!-- Edit button for roles with sub-profiles -->
       <button *ngIf="hasSubProfile" (click)="editProfile()" class="btn btn-outline-warning btn-sm d-flex align-items-center gap-2">
         <i class="bi bi-pencil-square"></i>
         <span>Edit Profile Details</span>
       </button>
       
-      <!-- Edit button for general account details -->
       <button (click)="editAccount()" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
         <i class="bi bi-person-gear"></i>
         <span>Edit Account Info</span>
@@ -99,7 +116,7 @@
   <!-- Profile Setup / Edit Forms -->
   <div *ngIf="(!existingProfile && !loadingProfile) || isEditing" class="card glass-panel p-4 p-sm-5">
     
-    <!-- BASE ACCOUNT UPDATE FORM (ADMIN, OWNER or general edit) -->
+    <!-- BASE ACCOUNT UPDATE FORM -->
     <form *ngIf="editMode === 'ACCOUNT'" [formGroup]="userForm" (ngSubmit)="onAccountSubmit()">
       <h4 class="fw-bold mb-3 text-gradient">Update Account Credentials</h4>
       
@@ -138,6 +155,7 @@
     <!-- TENANT PROFILE FORM -->
     <form *ngIf="editMode === 'PROFILE' && role === 'TENANT'" [formGroup]="tenantForm" (ngSubmit)="onTenantSubmit()">
       <h4 class="fw-bold mb-3 text-gradient">Tenant Profile Details</h4>
+      
       <div class="mb-3">
         <label for="tenantAddress" class="form-label">Residential Address</label>
         <textarea id="tenantAddress" formControlName="address" class="form-control" rows="3" placeholder="Enter full postal address" [ngClass]="{ 'is-invalid': submitted && ft['address'].errors }"></textarea>
@@ -145,6 +163,7 @@
           Address cannot be blank.
         </div>
       </div>
+
       <div class="row mb-4">
         <div class="col-sm-6">
           <label for="docType" class="form-label">Identification Document Type</label>
@@ -152,17 +171,28 @@
             <option value="" disabled selected>Select document...</option>
             <option value="AADHAAR">Aadhaar Card</option>
             <option value="PAN">PAN Card</option>
-            <option value="VoterId">Voter ID Card</option>
+            <option value="VoterId">Voter ID</option>
           </select>
           <div *ngIf="submitted && ft['documentType'].errors" class="invalid-feedback">
             Document type is required.
           </div>
         </div>
+
         <div class="col-sm-6">
           <label for="docFile" class="form-label">Upload File Copy</label>
-          <input type="file" id="docFile" (change)="onFileSelected($event)" class="form-control" [ngClass]="{ 'is-invalid': submitted && !selectedFile }">
-          <div *ngIf="submitted && !selectedFile" class="invalid-feedback">
-            Please upload document copy file.
+          <input 
+            type="file" 
+            id="docFile" 
+            (change)="onFileSelected($event)" 
+            accept=".pdf,.png,.jpg,.jpeg"
+            class="form-control" 
+            [ngClass]="{ 'is-invalid': submitted && !selectedFile && !existingProfile?.documentFileRef }"
+          >
+          <p class="text-muted small mt-1 mb-0" style="font-size: 0.75rem;">
+            Allowed types: <strong>PDF, PNG, JPG, JPEG</strong> (Max size: <strong>10 MB</strong>)
+          </p>
+          <div *ngIf="submitted && !selectedFile && !existingProfile?.documentFileRef" class="invalid-feedback">
+            Please upload a valid document file copy.
           </div>
         </div>
       </div>
@@ -176,7 +206,7 @@
       </div>
     </form>
 
-    <!-- MANDATORY TECHNICIAN PROFILE FORM -->
+    <!-- TECHNICIAN PROFILE FORM -->
     <form *ngIf="editMode === 'PROFILE' && role === 'TECHNICIAN'" [formGroup]="technicianForm" (ngSubmit)="onTechnicianSubmit()">
       <h4 class="fw-bold mb-3 text-gradient">Technician Profile Details</h4>
       <div class="row mb-4">
@@ -239,5 +269,31 @@
       </div>
     </form>
 
+  </div>
+</div>
+
+<!-- DOCUMENT REFERENCE MODAL -->
+<div *ngIf="showDocModal" class="modal fade show d-block tab-index-1" style="background-color: rgba(0, 0, 0, 0.5);" role="dialog">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-dark border-0 shadow">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-file-earmark-pdf text-danger me-2"></i>Document Details
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDocModal()"></button>
+      </div>
+      <div class="modal-body py-3">
+        <p class="mb-2">
+          <strong>Document File Reference:</strong> 
+          <code class="ms-1 text-primary">{{ existingProfile?.documentFileRef || 'No Reference Found' }}</code>
+        </p>
+        <p class="text-muted small mb-0">
+          This document is securely stored on the server file directory.
+        </p>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-dark btn-sm px-4" (click)="closeDocModal()">OK</button>
+      </div>
+    </div>
   </div>
 </div>

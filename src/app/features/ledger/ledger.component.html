@@ -1,13 +1,15 @@
 <div class="animated-fade-in">
+  <!-- HERO BANNER -->
   <div class="listings-hero-banner p-4 rounded shadow-sm mb-4 text-white"
        style="background: linear-gradient(rgba(9, 34, 68, 0.8), rgba(9, 34, 68, 0.9)), url('/listings_banner.jpg') no-repeat center center/cover;">
     <h1 class="h2 text-white fw-bold mb-1">Company Financial Ledger</h1>
-    <p class="mb-0 text-white-50">Track monthly rent collections, profit margins, and corporate balances</p>
+    <p class="mb-0 text-white-50">Track monthly rent collections, GST tax liabilities, and corporate profit margins</p>
   </div>
 
   <!-- ERROR ALERTS -->
   <div *ngIf="errorMessage" class="alert alert-danger py-2 mb-3">{{ errorMessage }}</div>
 
+  <!-- QUERY FORM -->
   <div class="card glass-panel p-4 mb-4">
     <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-search me-2 text-primary"></i>Query Ledger Archives</h5>
     
@@ -15,18 +17,18 @@
       <div class="col-md-4 col-sm-6">
         <label class="form-label">Month</label>
         <select [(ngModel)]="queryMonth" class="form-select">
-          <option value="1">January</option>
-          <option value="2">February</option>
-          <option value="3">March</option>
-          <option value="4">April</option>
-          <option value="5">May</option>
-          <option value="6">June</option>
-          <option value="7">July</option>
-          <option value="8">August</option>
-          <option value="9">September</option>
-          <option value="10">October</option>
-          <option value="11">November</option>
-          <option value="12">December</option>
+          <option [ngValue]="1">January</option>
+          <option [ngValue]="2">February</option>
+          <option [ngValue]="3">March</option>
+          <option [ngValue]="4">April</option>
+          <option [ngValue]="5">May</option>
+          <option [ngValue]="6">June</option>
+          <option [ngValue]="7">July</option>
+          <option [ngValue]="8">August</option>
+          <option [ngValue]="9">September</option>
+          <option [ngValue]="10">October</option>
+          <option [ngValue]="11">November</option>
+          <option [ngValue]="12">December</option>
         </select>
       </div>
       <div class="col-md-4 col-sm-6">
@@ -34,8 +36,9 @@
         <input type="number" [(ngModel)]="queryYear" class="form-control" placeholder="e.g. 2026">
       </div>
       <div class="col-md-4">
-        <button (click)="onQueryLedger()" class="btn btn-primary w-100 py-2">
-          <i class="bi bi-journal-text me-2"></i>Fetch Statement
+        <button (click)="onQueryLedger()" [disabled]="loading" class="btn btn-primary w-100 py-2">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <i *ngIf="!loading" class="bi bi-journal-text me-2"></i>Fetch Statement
         </button>
       </div>
     </div>
@@ -43,27 +46,36 @@
 
   <!-- LEDGER SUMMARY METRICS -->
   <div class="row g-4 mb-4" *ngIf="entries.length > 0">
-    <div class="col-md-6">
-      <div class="card glass-panel p-4 text-center border-start border-primary border-4">
+    <div class="col-md-4">
+      <div class="card glass-panel p-4 text-center border-start border-primary border-4 h-100">
         <span class="text-muted small">Total Collections</span>
-        <h2 class="fw-bold text-dark mt-1">₹ {{ totalCollected | number:'1.2-2' }}</h2>
+        <h2 class="fw-bold text-dark mt-1">₹ {{ (totalCollected ?? 0) | number:'1.2-2' }}</h2>
         <div class="progress mt-3 bg-light" style="height: 6px;">
           <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
         </div>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="card glass-panel p-4 text-center border-start border-success border-4">
-        <span class="text-muted small">Net Company Profit</span>
-        <h2 class="fw-bold text-success mt-1">₹ {{ totalProfit | number:'1.2-2' }}</h2>
+    <div class="col-md-4">
+      <div class="card glass-panel p-4 text-center border-start border-info border-4 h-100">
+        <span class="text-muted small">Total GST Tax Collected</span>
+        <h2 class="fw-bold text-info mt-1">₹ {{ (totalGstCollected ?? 0) | number:'1.2-2' }}</h2>
         <div class="progress mt-3 bg-light" style="height: 6px;">
-          <div class="progress-bar bg-success" role="progressbar" [style.width.%]="averageProfitPercent"></div>
+          <div class="progress-bar bg-info" role="progressbar" style="width: 100%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card glass-panel p-4 text-center border-start border-success border-4 h-100">
+        <span class="text-muted small">Net Company Profit</span>
+        <h2 class="fw-bold text-success mt-1">₹ {{ (totalProfit ?? 0) | number:'1.2-2' }}</h2>
+        <div class="progress mt-3 bg-light" style="height: 6px;">
+          <div class="progress-bar bg-success" role="progressbar" [style.width.%]="averageProfitPercent ?? 0"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- GENERATE REPORT BUTTON (ACCOUNT OFFICER & ADMIN ONLY) -->
+  <!-- GENERATE REPORT BUTTON -->
   <div class="d-flex justify-content-end mb-3" *ngIf="entries.length > 0">
     <button (click)="generateReport()" class="btn btn-success d-flex align-items-center gap-2 shadow-sm">
       <i class="bi bi-graph-up-arrow"></i>
@@ -84,6 +96,8 @@
             <th>Audited By</th>
             <th>Unit Details</th>
             <th>Rent Collected</th>
+            <th>GST %</th>
+            <th>GST Collected</th>
             <th>Profit Margin</th>
             <th>Profit Amount</th>
             <th>Logged Date</th>
@@ -91,25 +105,37 @@
         </thead>
         <tbody>
           <tr *ngFor="let ent of paginatedEntries">
-            <td><strong class="text-dark">#{{ ent.ledgerEntryId }}</strong></td>
-            <td>Invoice #{{ ent.invoiceId }}</td>
+            <td><strong class="text-dark">#{{ ent.ledgerId ?? 'N/A' }}</strong></td>
+            <td>Invoice #{{ ent.invoiceId ?? 0 }}</td>
             <td>
-              <div class="text-dark small">{{ ent.accountOfficerName || 'System Automated' }}</div>
-              <div class="small text-muted" *ngIf="ent.accountOfficerId">Officer ID: {{ ent.accountOfficerId }}</div>
+              <div class="text-dark small">{{ ent.officerName || 'System Automated' }}</div>
+              <div class="small text-muted" *ngIf="ent.officerId">
+                Officer ID: {{ ent.officerId }}
+              </div>
             </td>
             <td>
               <span class="badge bg-light border border-secondary text-secondary">{{ ent.unitType }}</span>
             </td>
-            <td><strong class="text-dark">₹ {{ ent.amountPaid }}</strong></td>
-            <td>{{ ent.profitPercent }}%</td>
-            <td><strong class="text-success">₹ {{ ent.profitAmount }}</strong></td>
-            <td>{{ ent.createdAt | date:'medium' }}</td>
+            <td><strong class="text-dark">₹ {{ (ent.amountPaid ?? 0) | number:'1.2-2' }}</strong></td>
+            <td>
+              <span class="badge bg-info-subtle text-info border border-info">
+                {{ (ent.gstPercent ?? 0) }}%
+              </span>
+            </td>
+            <td>
+              <strong class="text-info">
+                ₹ {{ (ent.gstAmount ?? 0) | number:'1.2-2' }}
+              </strong>
+            </td>
+            <td>{{ (ent.profitPercent ?? 0) }}%</td>
+            <td><strong class="text-success">₹ {{ (ent.profitAmount ?? 0) | number:'1.2-2' }}</strong></td>
+            <td>{{ ent.loggedDate | date:'medium' }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Pagination controls -->
+    <!-- PAGINATION CONTROLS -->
     <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="entries.length > pageSize">
       <span class="text-muted small">
         Showing {{ (page - 1) * pageSize + 1 }} to {{ min(page * pageSize, entries.length) }} of {{ entries.length }} entries
@@ -131,7 +157,8 @@
     </div>
   </div>
 
-  <div *ngIf="searched && entries.length === 0" class="card glass-panel p-5 text-center">
+  <!-- NO RESULTS PLACEHOLDER -->
+  <div *ngIf="searched && entries.length === 0 && !loading" class="card glass-panel p-5 text-center">
     <i class="bi bi-wallet2 text-muted fs-1 mb-2"></i>
     <h5 class="fw-bold text-dark">No Ledger Entries Found</h5>
     <p class="text-muted small mb-0">There are no financial ledger entries recorded for {{ getMonthName(queryMonth) }} {{ queryYear }}.</p>
@@ -139,7 +166,10 @@
 </div>
 
 <!-- FINANCIAL REPORT MODAL OVERLAY -->
-<div *ngIf="showReport" class="modal-overlay d-flex align-items-center justify-content-center" style="z-index: 1050; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(9, 34, 68, 0.7); backdrop-filter: blur(4px);">
+<div *ngIf="showReport" 
+     class="modal-overlay d-flex align-items-center justify-content-center" 
+     style="z-index: 1050; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(9, 34, 68, 0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);">
+  
   <div class="card glass-panel p-4 p-sm-5 w-100 animated-fade-in mx-3 shadow-lg border-0" style="max-width: 900px; max-height: 92vh; overflow-y: auto; background: #ffffff !important; border-radius: 8px;">
     
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary border-opacity-10 pb-3">
@@ -155,32 +185,31 @@
       </div>
     </div>
 
-    <!-- Toggle Buttons for Report Mode -->
+    <!-- TOGGLE REPORT MODE -->
     <div class="d-flex justify-content-center mb-4">
       <div class="btn-group shadow-sm" role="group">
         <button type="button" class="btn btn-sm px-4 py-2" 
                 [ngClass]="reportMode === 'month' ? 'btn-primary text-white' : 'btn-outline-secondary'"
-                (click)="reportMode = 'month'">
+                (click)="setReportMode('month')">
           <i class="bi bi-calendar-event me-1"></i> Month-wise Report
         </button>
         <button type="button" class="btn btn-sm px-4 py-2" 
                 [ngClass]="reportMode === 'year' ? 'btn-primary text-white' : 'btn-outline-secondary'"
-                (click)="reportMode = 'year'">
+                (click)="setReportMode('year')">
           <i class="bi bi-calendar3 me-1"></i> Year-wise Report ({{ activeReportYear }})
         </button>
       </div>
     </div>
 
-    <!-- Loading State for Year-wise report -->
+    <!-- LOADING STATE -->
     <div *ngIf="loadingReportData" class="text-center py-5">
       <div class="spinner-border text-primary mb-3" role="status"></div>
-      <p class="text-muted small">Aggregating annual transaction logs, please wait...</p>
+      <p class="text-muted small">Aggregating annual transaction logs across all months, please wait...</p>
     </div>
 
     <div *ngIf="!loadingReportData">
       <!-- ================== MONTH-WISE REPORT VIEW ================== -->
       <div *ngIf="reportMode === 'month'">
-        <!-- Overview Stats Cards -->
         <div class="row g-3 mb-4 text-dark">
           <div class="col-md-3 col-sm-6">
             <div class="p-3 bg-light rounded text-center border">
@@ -191,26 +220,25 @@
           <div class="col-md-3 col-sm-6">
             <div class="p-3 bg-light rounded text-center border">
               <span class="text-muted small d-block mb-1">Gross Collections</span>
-              <h4 class="fw-bold text-primary mb-0">₹{{ totalCollected | number:'1.0-0' }}</h4>
+              <h4 class="fw-bold text-primary mb-0">₹ {{ (totalCollected ?? 0) | number:'1.0-0' }}</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">GST Taxes</span>
+              <h4 class="fw-bold text-info mb-0">₹ {{ (totalGstCollected ?? 0) | number:'1.0-0' }}</h4>
             </div>
           </div>
           <div class="col-md-3 col-sm-6">
             <div class="p-3 bg-light rounded text-center border">
               <span class="text-muted small d-block mb-1">Net Yield</span>
-              <h4 class="fw-bold text-success mb-0">₹{{ totalProfit | number:'1.0-0' }}</h4>
-            </div>
-          </div>
-          <div class="col-md-3 col-sm-6">
-            <div class="p-3 bg-light rounded text-center border">
-              <span class="text-muted small d-block mb-1">Profit Share</span>
-              <h4 class="fw-bold text-warning mb-0">{{ averageProfitPercent | number:'1.1-1' }}%</h4>
+              <h4 class="fw-bold text-success mb-0">₹ {{ (totalProfit ?? 0) | number:'1.0-0' }}</h4>
             </div>
           </div>
         </div>
 
-        <!-- Charts Section -->
         <div class="row g-4 mb-4 text-dark">
-          <!-- Donut Chart -->
+          <!-- DONUT CHART -->
           <div class="col-md-6">
             <div class="border p-4 rounded h-100 bg-light text-center d-flex flex-column align-items-center justify-content-center">
               <h6 class="fw-bold text-dark mb-3">Profit vs. Cost Allocation</h6>
@@ -221,34 +249,34 @@
                   <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#dfe4ec" stroke-width="4"></circle>
                   <circle cx="21" cy="21" r="15.915" fill="transparent" 
                           stroke="#ff5a00" stroke-width="4" 
-                          [attr.stroke-dasharray]="averageProfitPercent + ' ' + (100 - averageProfitPercent)" 
+                          [attr.stroke-dasharray]="(averageProfitPercent ?? 0) + ' ' + (100 - (averageProfitPercent ?? 0))" 
                           stroke-dashoffset="0" style="transition: stroke-dasharray 0.8s ease-in-out;"></circle>
                 </svg>
                 <div class="position-absolute top-50 start-50 translate-middle text-center">
                   <span class="text-muted" style="font-size: 0.65rem; display: block;">Yield</span>
-                  <strong class="fs-5 text-dark">{{ averageProfitPercent | number:'1.0-0' }}%</strong>
+                  <strong class="fs-5 text-dark">{{ (averageProfitPercent ?? 0) | number:'1.0-0' }}%</strong>
                 </div>
               </div>
               
               <div class="d-flex justify-content-center gap-3 mt-3 w-100">
-                <span class="small" style="font-size: 0.75rem;"><i class="bi bi-circle-fill text-muted me-1"></i> Cost ({{ 100 - averageProfitPercent | number:'1.0-0' }}%)</span>
-                <span class="small" style="font-size: 0.75rem;"><i class="bi bi-circle-fill me-1" style="color: #ff5a00;"></i> Profit ({{ averageProfitPercent | number:'1.0-0' }}%)</span>
+                <span class="small" style="font-size: 0.75rem;"><i class="bi bi-circle-fill text-muted me-1"></i> Cost ({{ 100 - (averageProfitPercent ?? 0) | number:'1.0-0' }}%)</span>
+                <span class="small" style="font-size: 0.75rem;"><i class="bi bi-circle-fill me-1" style="color: #ff5a00;"></i> Profit ({{ (averageProfitPercent ?? 0) | number:'1.0-0' }}%)</span>
               </div>
             </div>
           </div>
 
-          <!-- Bar Chart -->
+          <!-- BAR CHART -->
           <div class="col-md-6">
             <div class="border p-4 rounded h-100 bg-light">
               <h6 class="fw-bold text-dark mb-3 text-center">Top Rent Collections</h6>
               
               <div class="d-flex align-items-end justify-content-around pt-3" style="height: 140px;">
                 <div *ngFor="let ent of getTopEntries()" class="text-center position-relative w-100 d-flex flex-column align-items-center">
-                  <div class="small text-muted mb-1" style="font-size: 0.65rem;">₹{{ ent.amountPaid | number:'1.0-0' }}</div>
+                  <div class="small text-muted mb-1" style="font-size: 0.65rem;">₹ {{ (ent.amountPaid ?? 0) | number:'1.0-0' }}</div>
                   <div class="bg-primary rounded-top" 
                        [style.height.px]="getBarHeight(ent.amountPaid)" 
-                       style="width: 24px; transition: height 0.6s ease-out; background-color: var(--primary-color) !important;"></div>
-                  <div class="small text-dark mt-2 fw-semibold" style="font-size: 0.68rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 60px;">#{{ ent.ledgerEntryId }}</div>
+                       style="width: 24px; transition: height 0.6s ease-out; background-color: #0d6efd !important;"></div>
+                  <div class="small text-dark mt-2 fw-semibold" style="font-size: 0.68rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 60px;">#{{ ent.ledgerId }}</div>
                 </div>
               </div>
             </div>
@@ -258,7 +286,6 @@
 
       <!-- ================== YEAR-WISE REPORT VIEW ================== -->
       <div *ngIf="reportMode === 'year'">
-        <!-- Overview Stats Cards -->
         <div class="row g-3 mb-4 text-dark">
           <div class="col-md-3 col-sm-6">
             <div class="p-3 bg-light rounded text-center border">
@@ -269,26 +296,25 @@
           <div class="col-md-3 col-sm-6">
             <div class="p-3 bg-light rounded text-center border">
               <span class="text-muted small d-block mb-1">Annual Collections</span>
-              <h4 class="fw-bold text-primary mb-0">₹{{ getYearlyTotalRevenue() | number:'1.0-0' }}</h4>
+              <h4 class="fw-bold text-primary mb-0">₹ {{ getYearlyTotalRevenue() | number:'1.0-0' }}</h4>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6">
+            <div class="p-3 bg-light rounded text-center border">
+              <span class="text-muted small d-block mb-1">Annual GST Collected</span>
+              <h4 class="fw-bold text-info mb-0">₹ {{ getYearlyTotalGst() | number:'1.0-0' }}</h4>
             </div>
           </div>
           <div class="col-md-3 col-sm-6">
             <div class="p-3 bg-light rounded text-center border">
               <span class="text-muted small d-block mb-1">Annual Yield</span>
-              <h4 class="fw-bold text-success mb-0">₹{{ getYearlyTotalProfit() | number:'1.0-0' }}</h4>
-            </div>
-          </div>
-          <div class="col-md-3 col-sm-6">
-            <div class="p-3 bg-light rounded text-center border">
-              <span class="text-muted small d-block mb-1">Avg Profit Share</span>
-              <h4 class="fw-bold text-warning mb-0">{{ getYearlyProfitPercent() | number:'1.1-1' }}%</h4>
+              <h4 class="fw-bold text-success mb-0">₹ {{ getYearlyTotalProfit() | number:'1.0-0' }}</h4>
             </div>
           </div>
         </div>
 
-        <!-- Trend Polyline Chart & Donut Chart -->
         <div class="row g-4 mb-4 text-dark">
-          <!-- Donut Allocation -->
+          <!-- DONUT ALLOCATION -->
           <div class="col-md-4">
             <div class="border p-4 rounded h-100 bg-light text-center d-flex flex-column align-items-center justify-content-center">
               <h6 class="fw-bold text-dark mb-3">Annual Share</h6>
@@ -314,33 +340,27 @@
             </div>
           </div>
 
-          <!-- SVG Polyline Line Chart -->
+          <!-- LINE CHART -->
           <div class="col-md-8">
             <div class="border p-4 rounded h-100 bg-light">
               <h6 class="fw-bold text-dark mb-3 text-center">Revenue Trend (Jan - Dec)</h6>
               
-              <div class="d-flex justify-content-center pt-3 align-items-center" style="height: 180px; overflow-x: auto;">
-                <svg width="380" height="180" viewBox="0 0 380 180" style="overflow: visible;">
-                  <!-- Grid lines -->
-                  <line x1="20" y1="140" x2="360" y2="140" stroke="#e2e8f0" stroke-width="1" />
-                  <line x1="20" y1="85" x2="360" y2="85" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
-                  <line x1="20" y1="30" x2="360" y2="30" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+              <div class="d-flex justify-content-center align-items-center" style="height: 180px; overflow: hidden;">
+                <svg width="360" height="170" viewBox="0 0 360 170" style="overflow: visible;">
+                  <line x1="15" y1="130" x2="345" y2="130" stroke="#e2e8f0" stroke-width="1" />
+                  <line x1="15" y1="80" x2="345" y2="80" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
+                  <line x1="15" y1="30" x2="345" y2="30" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4" />
                   
-                  <!-- Trend Line (Revenue) -->
-                  <polyline fill="none" stroke="#0056df" stroke-width="3" 
+                  <polyline fill="none" stroke="#0d6efd" stroke-width="3" 
                             [attr.points]="getLinePoints(monthlyRevenueData)" 
-                            style="transition: all 0.5s ease-in-out; stroke: var(--primary-color) !important;" />
+                            style="transition: all 0.5s ease-in-out;" />
                   
-                  <!-- Nodes / Tooltips -->
                   <g *ngFor="let pt of getLineNodes(monthlyRevenueData)">
-                    <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="5" fill="#0056df" 
-                            stroke="#ffffff" stroke-width="1.5" style="fill: var(--primary-color) !important;" />
-                    <!-- Month Labels -->
-                    <text [attr.x]="pt.x" y="160" text-anchor="middle" font-size="9" fill="#64748b" font-weight="semibold">
+                    <circle [attr.cx]="pt.x" [attr.cy]="pt.y" r="4.5" fill="#0d6efd" stroke="#ffffff" stroke-width="1.5" />
+                    <text [attr.x]="pt.x" y="150" text-anchor="middle" font-size="9" fill="#64748b" font-weight="600">
                       {{ pt.month }}
                     </text>
-                    <!-- Values above nodes -->
-                    <text [attr.x]="pt.x" [attr.y]="pt.y - 10" text-anchor="middle" font-size="8" fill="#1e293b" font-weight="bold" *ngIf="pt.val > 0">
+                    <text [attr.x]="pt.x" [attr.y]="pt.y - 8" text-anchor="middle" font-size="8" fill="#1e293b" font-weight="700" *ngIf="pt.val > 0">
                       ₹{{ pt.val | number:'1.0-0' }}
                     </text>
                   </g>
@@ -351,14 +371,14 @@
         </div>
       </div>
 
-      <!-- Financial Analysis Text -->
+      <!-- ANALYTICAL INSIGHTS FOOTER -->
       <div class="bg-light p-3 rounded border mb-4 text-dark text-start">
-        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-lightbulb text-warning me-1"></i>Analytical Insights & Observations</h6>
+        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-lightbulb text-warning me-1"></i>Analytical Insights & GST Observations</h6>
         <p class="small text-muted mb-0" *ngIf="reportMode === 'month'">
-          The average margin for the current period resolves to <strong>{{ averageProfitPercent | number:'1.1-1' }}%</strong>. Cost structures remain stable at <strong>{{ 100 - averageProfitPercent | number:'1.1-1' }}%</strong>. Top transactional velocities indicate robust liquidity cycles. Recommendations are set to retain operational cash flows within the 99acres parameters to preserve balance reserves.
+          The total GST tax levied for the period resolves to <strong>₹ {{ (totalGstCollected ?? 0) | number:'1.2-2' }}</strong>. Average company profit margin stands at <strong>{{ (averageProfitPercent ?? 0) | number:'1.1-1' }}%</strong>. Recommendations are set to retain operational cash flows within standard parameters.
         </p>
         <p class="small text-muted mb-0" *ngIf="reportMode === 'year'">
-          Annual operations aggregated across the year {{ activeReportYear }} show an overall collection volume of <strong>₹{{ getYearlyTotalRevenue() | number:'1.0-0' }}</strong> with a net performance yield of <strong>₹{{ getYearlyTotalProfit() | number:'1.0-0' }}</strong>. The annual yield margin stands stable at <strong>{{ getYearlyProfitPercent() | number:'1.1-1' }}%</strong>. Ledger trends reflect balanced performance across all housing units.
+          Annual operations aggregated across the year {{ activeReportYear }} reflect total collections of <strong>₹ {{ getYearlyTotalRevenue() | number:'1.0-0' }}</strong> with cumulative GST collections of <strong>₹ {{ getYearlyTotalGst() | number:'1.0-0' }}</strong> and net performance yield of <strong>₹ {{ getYearlyTotalProfit() | number:'1.0-0' }}</strong>.
         </p>
       </div>
 
@@ -368,4 +388,3 @@
     </div>
   </div>
 </div>
-

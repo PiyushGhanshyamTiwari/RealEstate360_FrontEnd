@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { ApiService } from '../../core/services/api.service';
 import { forkJoin, of } from 'rxjs';
@@ -16,6 +16,7 @@ import { catchError } from 'rxjs/operators';
 export class DashboardComponent implements OnInit {
   authService = inject(AuthService);
   apiService = inject(ApiService);
+  router = inject(Router);
 
   role = '';
   userId: number | null = null;
@@ -56,7 +57,7 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
     if (user) {
-      this.role = user.role.toUpperCase();
+      this.role = user.role ? user.role.toUpperCase() : '';
       this.userId = user.userId;
       this.checkProfileSetup();
       this.loadDashboardData();
@@ -66,16 +67,23 @@ export class DashboardComponent implements OnInit {
   checkProfileSetup(): void {
     if (!this.userId) return;
 
+    const user = this.authService.currentUserValue;
+
+    // TENANT ROLE
     if (this.role === 'TENANT') {
-      if (localStorage.getItem(`re360_tenant_profile_registered_${this.userId}`) === 'true') {
+      const isCached = localStorage.getItem(`re360_tenant_profile_registered_${this.userId}`) === 'true';
+      if (isCached) {
         this.profileMissing = false;
         return;
       }
-      this.apiService.getApplicationByTenantId(this.userId).subscribe({
-        next: (apps) => {
-          if (apps && apps.length > 0) {
+
+      this.apiService.getTenantByUserId(this.userId).pipe(
+        catchError(() => of(null))
+      ).subscribe({
+        next: (profile) => {
+          if (profile && (profile.tenantId || (profile as any).id)) {
             this.profileMissing = false;
-            localStorage.setItem(`re360_tenant_profile_registered_${this.userId}`, 'true');
+            localStorage.setItem(`re360_tenant_profile_registered_${this.userId!}`, 'true');
           } else {
             this.profileMissing = true;
           }
@@ -84,43 +92,75 @@ export class DashboardComponent implements OnInit {
           this.profileMissing = true;
         }
       });
+
+    // TECHNICIAN ROLE
     } else if (this.role === 'TECHNICIAN') {
-      if (localStorage.getItem(`re360_technician_profile_registered_${this.userId}`) === 'true') {
+      const isCached = localStorage.getItem(`re360_technician_profile_registered_${this.userId}`) === 'true';
+      if (isCached) {
         this.profileMissing = false;
         return;
       }
+
       this.apiService.getTechnicianById(this.userId).pipe(
-        catchError(() => {
-          this.profileMissing = true;
-          return of(null);
-        })
-      ).subscribe(profile => {
-        if (profile) {
-          this.profileMissing = false;
-          localStorage.setItem(`re360_technician_profile_registered_${this.userId}`, 'true');
-        } else {
+        catchError(() => of(null))
+      ).subscribe({
+        next: (profile) => {
+          if (profile && (profile.technicianId || (profile as any).id)) {
+            this.profileMissing = false;
+            localStorage.setItem(`re360_technician_profile_registered_${this.userId!}`, 'true');
+          } else {
+            this.profileMissing = true;
+          }
+        },
+        error: () => {
           this.profileMissing = true;
         }
       });
+
+    // ACCOUNT OFFICER ROLE
     } else if (this.role === 'ACCOUNT OFFICER') {
-      if (localStorage.getItem(`re360_officer_profile_registered_${this.userId}`) === 'true') {
+      const isCached = localStorage.getItem(`re360_officer_profile_registered_${this.userId}`) === 'true';
+      if (isCached) {
         this.profileMissing = false;
         return;
       }
+
       this.apiService.getOfficerById(this.userId).pipe(
-        catchError(() => {
-          this.profileMissing = true;
-          return of(null);
-        })
-      ).subscribe(profile => {
-        if (profile) {
-          this.profileMissing = false;
-          localStorage.setItem(`re360_officer_profile_registered_${this.userId}`, 'true');
-        } else {
+        catchError(() => of(null))
+      ).subscribe({
+        next: (profile) => {
+          if (profile && (profile.officerId || (profile as any).id)) {
+            this.profileMissing = false;
+            localStorage.setItem(`re360_officer_profile_registered_${this.userId!}`, 'true');
+          } else if (user?.emailId) {
+            this.apiService.getAllOfficers().pipe(
+              catchError(() => of([]))
+            ).subscribe((officers: any[]) => {
+              const matched = officers.find((o: any) => o.emailId === user.emailId || o.email === user.emailId);
+              if (matched) {
+                this.profileMissing = false;
+                localStorage.setItem(`re360_officer_profile_registered_${this.userId!}`, 'true');
+              } else {
+                this.profileMissing = true;
+              }
+            });
+          } else {
+            this.profileMissing = true;
+          }
+        },
+        error: () => {
           this.profileMissing = true;
         }
       });
+
+    // OTHER ROLES (ADMIN, OWNER)
+    } else {
+      this.profileMissing = false;
     }
+  }
+
+  navigateToProfileSetup(): void {
+    this.router.navigate(['/profile-setup']);
   }
 
   loadDashboardData(): void {

@@ -156,16 +156,18 @@ export interface LeaseOutputDTO {
 }
 
 export interface LedgerEntryOutputDto {
-  ledgerEntryId: number;
+  ledgerId: number;
   invoiceId: number;
-  accountOfficerId?: number;
-  accountOfficerName?: string;
+  officerId?: number;
+  officerName?: string;
   unitType: string;
   amountPaid: number;
   profitPercent: number;
   profitAmount: number;
+  gstPercent: number;
+  gstAmount: number;
   description: string;
-  createdAt: string;
+  loggedDate: string; // ISO LocalDateTime string from Java
 }
 
 export interface MaintenanceLogRequestDTO {

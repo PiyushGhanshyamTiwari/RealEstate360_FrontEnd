@@ -88,17 +88,27 @@
   <!-- INVOICE LIST & SEARCH -->
   <div *ngIf="!showDefaulters" class="card glass-panel p-4">
     
-    <!-- Search Form (Hidden for Tenants since we map directly!) -->
-    <div class="row mb-4 align-items-end g-3" *ngIf="!isTenant">
+    <!-- Lease Dropdown Search Form -->
+    <div class="row mb-4 align-items-end g-3">
       <div class="col-md-6">
         <label class="form-label fw-bold">Select Active Lease Agreement</label>
         <div class="input-group">
-          <select [(ngModel)]="searchLeaseId" (change)="onSearchInvoices()" class="form-select" [disabled]="loadingLeases">
+          <!-- Non-Tenant Dropdown -->
+          <select *ngIf="!isTenant" [(ngModel)]="searchLeaseId" (change)="onSearchInvoices()" class="form-select" [disabled]="loadingLeases">
             <option value="" disabled>-- Select a lease --</option>
             <option *ngFor="let lease of leases" [value]="lease.leaseId">
               Lease #{{ lease.leaseId }} - {{ lease.tenantName }} (Rent: ₹{{ lease.rentAmount }})
             </option>
           </select>
+
+          <!-- Tenant Dropdown (Mapped to Active Leases with Unit ID & Type) -->
+          <select *ngIf="isTenant" [(ngModel)]="searchLeaseId" (change)="onSearchInvoices()" class="form-select" [disabled]="loadingLeases">
+            <option value="" disabled>-- Select your lease --</option>
+            <option *ngFor="let opt of tenantLeaseOptions" [value]="opt.leaseId">
+              Lease #{{ opt.leaseId }} - Unit #{{ opt.unitId }} ({{ opt.unitType }}) (Rent: ₹{{ opt.rentAmount }})
+            </option>
+          </select>
+
           <button (click)="onSearchInvoices()" class="btn btn-primary" type="button" [disabled]="loadingLeases">
             Filter Invoices
           </button>
@@ -125,7 +135,7 @@
             <th>Due Date</th>
             <th>Amount Due</th>
             <th>Status</th>
-            <th>Generated On</th>
+            <th>Date / Paid Stamp</th>
             <th *ngIf="isAccountOfficer" class="text-end">Billing Actions</th>
             <th class="text-center">Download</th>
           </tr>
@@ -149,7 +159,9 @@
                 {{ inv.status }}
               </span>
             </td>
-            <td>{{ inv.generatedAt | date:'medium' }}</td>
+            <td>
+              <span>{{ inv.generatedAt | date:'medium' }}</span>
+            </td>
             <td *ngIf="isAccountOfficer" class="text-end">
               <button *ngIf="inv.status !== 'PAID'" (click)="openPaymentModal(inv)" class="btn btn-success btn-sm py-1 px-3">
                 <i class="bi bi-wallet2"></i> Mark Paid
@@ -194,11 +206,11 @@
     <div *ngIf="!loadingInvoices && invoices.length === 0" class="text-center py-5">
       <i class="bi bi-receipt text-muted fs-1 mb-2"></i>
       <h5 class="fw-bold text-dark">No Billing Statements</h5>
-      <p class="text-muted small">{{ isTenant ? 'No generated invoices found for your lease agreements.' : 'Enter a valid Lease ID above to view details.' }}</p>
+      <p class="text-muted small">Select an active lease above to view details.</p>
     </div>
   </div>
 
-  <!-- PAYMENTS MODAL (AUTO-MAPPED AND INTEGRATED) -->
+  <!-- PAYMENTS MODAL -->
   <div *ngIf="activeInvoiceForPayment" class="modal-overlay d-flex align-items-center justify-content-center">
     <div class="card glass-panel p-4 w-100 animated-fade-in mx-3 shadow-lg border border-secondary border-opacity-10" style="max-width: 440px; background: white !important;">
       <h4 class="fw-bold mb-3 text-gradient">Record Payment</h4>

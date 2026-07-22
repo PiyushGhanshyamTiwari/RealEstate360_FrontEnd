@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -18,6 +18,10 @@ export class UnitsComponent implements OnInit {
   private fb = inject(FormBuilder);
   public apiService = inject(ApiService);
   authService = inject(AuthService);
+  private sanitizer = inject(DomSanitizer);
+
+  // Minimum date binding for template (YYYY-MM-DD format)
+  todayDate: string = new Date().toISOString().split('T')[0];
 
   units: UnitOutputDTO[] = [];
   ownerProperties: PropertyOutputDTO[] = [];
@@ -50,6 +54,7 @@ export class UnitsComponent implements OnInit {
     }
     return pages;
   }
+
   role = '';
   userId: number | null = null;
 
@@ -71,7 +76,13 @@ export class UnitsComponent implements OnInit {
   // Detailed view segment
   selectedUnit: UnitOutputDTO | null = null;
   newAmenityName = '';
-  photos: { photoId: number; caption?: string, imageUrl?: string }[] = [];
+  photos: { photoId: number; caption?: string; imageUrl?: string }[] = [];
+
+  // Carousel & Lightbox browsing variables and methods
+  currentPhotoIndex = 0;
+  isLightboxOpen = false;
+  touchStartX = 0;
+  touchEndX = 0;
 
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
@@ -86,7 +97,7 @@ export class UnitsComponent implements OnInit {
       propertyId: ['', Validators.required],
       areaSqFt: ['', [Validators.required, Validators.min(10)]],
       floor: [0, [Validators.required, Validators.min(0)]],
-      availableFrom: ['', Validators.required],
+      availableFrom: ['', [Validators.required, this.futureDateValidator]],
       rentAmount: ['', [Validators.required, Validators.min(1)]],
       depositAmount: ['', [Validators.required, Validators.min(1)]]
     });
@@ -98,6 +109,18 @@ export class UnitsComponent implements OnInit {
     }
 
     this.applyFilters();
+  }
+
+  // Custom Validator to disallow past dates
+  futureDateValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) {
+      return null;
+    }
+    const selectedDate = new Date(control.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Strip time component for fair date comparison
+
+    return selectedDate >= today ? null : { pastDate: true };
   }
 
   get fu() { return this.unitForm.controls; }
@@ -214,23 +237,21 @@ export class UnitsComponent implements OnInit {
   }
 
   openDetailView(unit: UnitOutputDTO): void {
-  this.selectedUnit = unit;
-  this.newAmenityName = '';
-  this.currentPhotoIndex = 0;
-  this.isLightboxOpen = false;
-  
-  this.photos = [];
-  if (unit.propertyPhotos) {
-    this.photos = Object.keys(unit.propertyPhotos).map(photoId => ({
-      photoId: Number(photoId),
-      caption: unit.propertyPhotos?.[Number(photoId)],
-      imageUrl: '' // Add a placeholder for the object URL string
-    }));
-  }
-}
+    this.selectedUnit = unit;
+    this.newAmenityName = '';
+    this.currentPhotoIndex = 0;
+    this.isLightboxOpen = false;
 
-private sanitizer = inject(DomSanitizer); // Inject it
-// Create a helper method
+    this.photos = [];
+    if (unit.propertyPhotos) {
+      this.photos = Object.keys(unit.propertyPhotos).map((photoId, index) => ({
+        photoId: Number(photoId),
+        caption: unit.propertyPhotos?.[Number(photoId)] || `Unit Photo ${index + 1}`,
+        imageUrl: ''
+      }));
+    }
+  }
+
   getSanitizedUrl(photoId: number): SafeUrl {
     return this.sanitizer.bypassSecurityTrustUrl(`http://localhost:8080/api/v1/propertyphoto/views/${photoId}`);
   }
@@ -239,12 +260,6 @@ private sanitizer = inject(DomSanitizer); // Inject it
     this.selectedUnit = null;
     this.isLightboxOpen = false;
   }
-
-  // Carousel & Lightbox browsing variables and methods
-  currentPhotoIndex = 0;
-  isLightboxOpen = false;
-  touchStartX = 0;
-  touchEndX = 0;
 
   prevPhoto(): void {
     if (this.photos.length <= 1) return;
@@ -308,29 +323,53 @@ private sanitizer = inject(DomSanitizer); // Inject it
   }
 
   onUploadPhoto(event: any): void {
+    this.errorMessage = '';
+    this.successMessage = '';
+
     if (event.target.files && event.target.files.length > 0 && this.selectedUnit) {
       const files: FileList = event.target.files;
       const userName = this.authService.currentUserValue?.userName || 'Owner';
+      
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      const maxSizeBytes = 5 * 1024 * 1024; // 5 MB Limit
+      
       let successCount = 0;
 
       for (let i = 0; i < files.length; i++) {
         const file: File = files[i];
-        this.apiService.uploadPhoto(this.selectedUnit.unitId, file, userName, `Unit Photo ${i + 1}`).subscribe({
+
+        // 1. Validate File Type
+        if (!allowedTypes.includes(file.type.toLowerCase())) {
+          this.errorMessage = `Invalid file type for '${file.name}'. Only PNG and JPG/JPEG files are allowed.`;
+          event.target.value = '';
+          return;
+        }
+
+        // 2. Validate File Size
+        if (file.size > maxSizeBytes) {
+          this.errorMessage = `File '${file.name}' exceeds the 5MB size limit. Please upload a smaller image.`;
+          event.target.value = '';
+          return;
+        }
+
+        // Dynamically compute photo number based on current list length
+        const photoIndex = this.photos.length + i + 1;
+        const captionText = `Unit Photo ${photoIndex}`;
+
+        this.apiService.uploadPhoto(this.selectedUnit.unitId, file, userName, captionText).subscribe({
           next: (photo) => {
             successCount++;
-            // Add to local photos array for active view
+            
             this.photos.push({
               photoId: photo.photoId,
-              caption: photo.caption
+              caption: photo.caption || captionText
             });
 
-            // Add to selectedUnit.propertyPhotos map so it persists in the session DTO
             if (!this.selectedUnit!.propertyPhotos) {
               this.selectedUnit!.propertyPhotos = {};
             }
-            this.selectedUnit!.propertyPhotos[photo.photoId] = photo.caption || 'Unit Photo';
+            this.selectedUnit!.propertyPhotos[photo.photoId] = photo.caption || captionText;
 
-            // Set current view to the newly uploaded photo
             this.currentPhotoIndex = this.photos.length - 1;
 
             this.successMessage = `${successCount} photo(s) uploaded successfully!`;
@@ -342,6 +381,8 @@ private sanitizer = inject(DomSanitizer); // Inject it
           }
         });
       }
+
+      event.target.value = ''; // Reset file input selection
     }
   }
 

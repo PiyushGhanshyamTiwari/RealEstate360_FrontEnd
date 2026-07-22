@@ -17,15 +17,32 @@
       <div class="card glass-panel p-4 h-100">
         <h4 class="fw-bold mb-3 text-gradient"><i class="bi bi-file-earmark-text me-2"></i>My Associated Lease</h4>
         
+        <!-- Lease Switcher Dropdown for Tenant (Now showing Unit ID and Type) -->
+        <div *ngIf="tenantLeases.length > 0" class="mb-3">
+          <label for="tenantLeaseSelect" class="form-label text-muted small fw-bold">Select Active Lease Agreement</label>
+          <select id="tenantLeaseSelect" [(ngModel)]="selectedTenantLeaseId" (change)="onTenantLeaseSelect()" class="form-select">
+            <option *ngFor="let lease of tenantLeases" [value]="lease.leaseId">
+              Lease #{{ lease.leaseId }} - Unit #{{ lease.unitId }} ({{ lease.unitType }}) - [{{ lease.status }}]
+            </option>
+          </select>
+        </div>
+
         <div *ngIf="loadingLeases" class="text-center py-5">
           <div class="spinner-border text-primary" role="status"></div>
           <p class="text-muted mt-2">Loading lease contract...</p>
         </div>
 
         <div *ngIf="!loadingLeases && tenantLease" class="d-flex flex-column gap-3">
-          <div class="bg-light p-3 rounded border border-secondary border-opacity-10">
-            <span class="text-muted d-block small">Lease Reference ID</span>
-            <h4 class="fw-bold text-dark mb-0">#{{ tenantLease.leaseId }}</h4>
+          <div class="bg-light p-3 rounded border border-secondary border-opacity-10 d-flex justify-content-between align-items-center">
+            <div>
+              <span class="text-muted d-block small">Selected Lease Reference ID</span>
+              <h4 class="fw-bold text-dark mb-0">#{{ tenantLease.leaseId }}</h4>
+            </div>
+            <div class="text-end" *ngIf="tenantLease.unitId">
+              <span class="badge bg-primary text-white text-uppercase px-2 py-1">
+                Unit #{{ tenantLease.unitId }} • {{ tenantLease.unitType }}
+              </span>
+            </div>
           </div>
 
           <div class="row g-3">
@@ -55,7 +72,7 @@
           </div>
         </div>
 
-        <div *ngIf="!loadingLeases && !tenantLease" class="text-center py-5">
+        <div *ngIf="!loadingLeases && tenantLeases.length === 0" class="text-center py-5">
           <i class="bi bi-file-earmark-lock text-muted fs-1 mb-2"></i>
           <h5 class="fw-bold text-dark">No Leases Found</h5>
           <p class="text-muted small mb-0">No active lease agreements found for your tenant profile.</p>
@@ -156,14 +173,26 @@
         </div>
 
         <div *ngIf="!loadingApps && associatedApp" class="bg-light p-3 rounded border border-secondary border-opacity-10 mt-3">
-          <h6 class="fw-bold text-primary mb-2">Approved Rental Application Details</h6>
+          <h6 class="fw-bold text-primary mb-2">Rental Application Details</h6>
           <table class="table table-borderless table-sm text-secondary m-0 small">
             <tr><td>Application ID:</td><td><strong class="text-primary">#{{ associatedApp.applicationId }}</strong></td></tr>
             <tr><td>Tenant User ID:</td><td>User #{{ associatedApp.userId }}</td></tr>
             <tr><td>Rental Period:</td><td>{{ associatedApp.startDate }} to {{ associatedApp.endDate }}</td></tr>
-            <tr><td>Application Status:</td><td><span class="badge bg-success">Approved</span></td></tr>
+            <tr>
+              <td>Application Status:</td>
+              <td>
+                <span class="badge text-uppercase" [ngClass]="isAlreadyAgreed ? 'bg-success' : 'bg-info text-dark'">
+                  {{ isAlreadyAgreed ? 'AGREED' : associatedApp.status }}
+                </span>
+              </td>
+            </tr>
           </table>
-          <div class="mt-2 text-warning small"><i class="bi bi-info-circle me-1"></i>A lease was automatically created in <strong>Review</strong>. Use the form next to this panel to Agree/Sign this contract.</div>
+          <div *ngIf="!isAlreadyAgreed" class="mt-2 text-warning small">
+            <i class="bi bi-info-circle me-1"></i>A lease was created in <strong>Review</strong>. Sign/Agree this contract in the update section.
+          </div>
+          <div *ngIf="isAlreadyAgreed" class="mt-2 text-success small">
+            <i class="bi bi-check-circle-fill me-1"></i>This lease contract is already signed and <strong>Agreed</strong>. Updates are disabled.
+          </div>
         </div>
 
         <div *ngIf="!loadingApps && selectedUnitId && !associatedApp" class="alert alert-warning py-2 mt-3 small">
@@ -175,7 +204,10 @@
     <!-- LEASE UPDATE FORM -->
     <div class="col-md-6">
       <div class="card glass-panel p-4 h-100">
-        <h4 class="fw-bold mb-3 text-gradient"><i class="bi bi-pencil-square me-2"></i>Sign / Update Contract</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold text-gradient mb-0"><i class="bi bi-pencil-square me-2"></i>Sign / Update Contract</h4>
+          <span *ngIf="isAlreadyAgreed" class="badge bg-secondary"><i class="bi bi-lock-fill me-1"></i>LOCKED</span>
+        </div>
         <p class="text-muted small">Select unit first. If an approved application exists, the Lease ID defaults to the Application ID value.</p>
         
         <form [formGroup]="leaseForm" (ngSubmit)="onSubmit()">
@@ -199,9 +231,9 @@
             </div>
           </div>
 
-          <button type="submit" [disabled]="submitting" class="btn btn-primary w-100 py-2.5">
+          <button type="submit" [disabled]="submitting || isAlreadyAgreed" class="btn btn-primary w-100 py-2.5">
             <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2"></span>
-            <span>Update Lease Agreement</span>
+            <span>{{ isAlreadyAgreed ? 'Contract Already Signed' : 'Update Lease Agreement' }}</span>
           </button>
         </form>
       </div>

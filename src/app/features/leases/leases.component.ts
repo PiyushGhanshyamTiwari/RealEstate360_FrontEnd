@@ -10,6 +10,9 @@ import { UnitOutputDTO, ApplicationOutputDTO, InvoiceOutputDTO } from '../../cor
 interface SimulatedLease {
   leaseId: number;
   tenantId: number;
+  unitId?: number;
+  unitType?: string;
+  propertyName?: string;
   startDate: string;
   endDate: string;
   status: string;
@@ -38,9 +41,14 @@ export class LeasesComponent implements OnInit {
   selectedUnitId = '';
   associatedApp: ApplicationOutputDTO | null = null;
   loadingApps = false;
+  isAlreadyAgreed = false; // Controls locking owner update form permanently
 
   // Tenant bindings
+  allUnitsMap: Map<number, UnitOutputDTO> = new Map();
+  tenantLeases: SimulatedLease[] = [];
+  selectedTenantLeaseId: number | null = null;
   tenantLease: SimulatedLease | null = null;
+  tenantInvoicesMap: Map<number, InvoiceOutputDTO[]> = new Map();
   tenantInvoices: InvoiceOutputDTO[] = [];
   loadingLeases = false;
 
@@ -92,8 +100,8 @@ export class LeasesComponent implements OnInit {
     }
 
     this.leaseForm = this.fb.group({
-      leaseId: ['', [Validators.required, Validators.min(1)]],
-      status: ['', Validators.required]
+      leaseId: [{ value: '', disabled: false }, [Validators.required, Validators.min(1)]],
+      status: [{ value: '', disabled: false }, Validators.required]
     });
 
     if (this.isOwner) {
@@ -108,7 +116,6 @@ export class LeasesComponent implements OnInit {
   // --- OWNER METHODS ---
   loadOwnerUnits(): void {
     this.apiService.getAllUnits().subscribe(units => {
-      // Filter units belonging to Owner
       if (this.userId) {
         this.apiService.findPropertyByOwnerId(this.userId).subscribe(props => {
           const propIds = props.map(p => p.propertyId);
@@ -122,16 +129,33 @@ export class LeasesComponent implements OnInit {
     if (!this.selectedUnitId) return;
     this.loadingApps = true;
     this.associatedApp = null;
-    this.leaseForm.patchValue({ leaseId: '' });
+    this.isAlreadyAgreed = false;
+    this.leaseForm.enable();
+    this.leaseForm.patchValue({ leaseId: '', status: '' });
+
+    const selectedUnit = this.ownerUnits.find(u => u.unitId === Number(this.selectedUnitId));
 
     this.apiService.getApplicationsByUnitId(Number(this.selectedUnitId)).subscribe({
       next: (apps) => {
-        // Find approved application
-        const approved = apps.find(a => a.status === 'Approved');
+        // Find approved or agreed application
+        const approved = apps.find(a => a.status === 'Approved' || a.status === 'Agreed');
         if (approved) {
           this.associatedApp = approved;
-          // Set Lease ID default to Application ID
           this.leaseForm.patchValue({ leaseId: approved.applicationId });
+
+          // 1. Check if unit is already marked LEASED OR app status is Agreed
+          if (selectedUnit?.status?.toUpperCase() === 'LEASED' || approved.status === 'Agreed') {
+            this.lockFormAsAgreed();
+          } else {
+            // 2. Backup check: verify if invoices already exist for this lease ID
+            this.apiService.listInvoiceWithLeaseId(approved.applicationId).pipe(
+              catchError(() => of([]))
+            ).subscribe(invoices => {
+              if (invoices && invoices.length > 0) {
+                this.lockFormAsAgreed();
+              }
+            });
+          }
         }
         this.loadingApps = false;
       },
@@ -141,13 +165,31 @@ export class LeasesComponent implements OnInit {
     });
   }
 
+  private lockFormAsAgreed(): void {
+    this.isAlreadyAgreed = true;
+    this.leaseForm.patchValue({ status: 'Agreed' });
+    this.leaseForm.disable();
+  }
+
   // --- TENANT METHODS ---
   loadTenantLeaseAndInvoices(): void {
     this.loadingLeases = true;
-    this.tenantLease = null;
-    this.tenantInvoices = [];
+    this.tenantLeases = [];
+    this.tenantInvoicesMap.clear();
 
-    // Scan first 50 leaseId values in parallel
+    // Fetch all units first to map unit details (unitId, type, propertyName)
+    this.apiService.getAllUnits().subscribe({
+      next: (units) => {
+        units.forEach(u => this.allUnitsMap.set(u.unitId, u));
+        this.fetchTenantData();
+      },
+      error: () => {
+        this.fetchTenantData();
+      }
+    });
+  }
+
+  private fetchTenantData(): void {
     const requests = [];
     for (let i = 1; i <= 50; i++) {
       requests.push(this.apiService.listInvoiceWithLeaseId(i).pipe(catchError(() => of([]))));
@@ -155,8 +197,6 @@ export class LeasesComponent implements OnInit {
 
     forkJoin(requests).subscribe({
       next: (results) => {
-        let matchingLeaseId = null;
-
         results.forEach((invoices, index) => {
           const leaseId = index + 1;
           if (invoices && invoices.length > 0) {
@@ -164,38 +204,55 @@ export class LeasesComponent implements OnInit {
             const isMine = firstInv.tenantId === this.tenantProfileId || firstInv.tenantId === 1;
             
             if (isMine) {
-              matchingLeaseId = leaseId;
-              this.tenantInvoices = invoices;
-              this.page = 1;
-              this.tenantLease = {
+              this.tenantInvoicesMap.set(leaseId, invoices);
+              const matchedUnit = this.allUnitsMap.get(leaseId);
+
+              this.tenantLeases.push({
                 leaseId: leaseId,
                 tenantId: firstInv.tenantId,
+                unitId: matchedUnit?.unitId || leaseId,
+                unitType: matchedUnit?.type || 'Unit',
+                propertyName: matchedUnit?.propertyName || '',
                 startDate: firstInv.periodStart,
                 endDate: invoices[invoices.length - 1].periodEnd,
-                status: 'Agreed', // If invoices exist, status has been Agreed
+                status: 'Agreed',
                 amountDue: firstInv.amountDue
-              };
+              });
             }
           }
         });
 
-        // If no agreed lease found via invoices, check approved applications to show review lease
-        if (!matchingLeaseId && this.userId) {
+        if (this.userId) {
           this.apiService.getApplicationByTenantId(this.userId).subscribe(apps => {
-            const approvedApp = apps.find(a => a.status === 'Approved');
-            if (approvedApp) {
-              this.tenantLease = {
-                leaseId: approvedApp.applicationId, // Estimate leaseId as applicationId
-                tenantId: this.tenantProfileId,
-                startDate: approvedApp.startDate.toString(),
-                endDate: approvedApp.endDate.toString(),
-                status: 'Review',
-                amountDue: 0
-              };
+            apps.forEach(app => {
+              if ((app.status === 'Approved' || app.status === 'Agreed') && !this.tenantLeases.some(l => l.leaseId === app.applicationId)) {
+                const matchedUnit = this.allUnitsMap.get(app.unitId);
+
+                this.tenantLeases.push({
+                  leaseId: app.applicationId,
+                  tenantId: this.tenantProfileId,
+                  unitId: app.unitId,
+                  unitType: matchedUnit?.type || 'Unit',
+                  propertyName: matchedUnit?.propertyName || '',
+                  startDate: app.startDate.toString(),
+                  endDate: app.endDate.toString(),
+                  status: app.status === 'Agreed' ? 'Agreed' : 'Review',
+                  amountDue: 0
+                });
+              }
+            });
+
+            if (this.tenantLeases.length > 0) {
+              this.selectedTenantLeaseId = this.tenantLeases[0].leaseId;
+              this.onTenantLeaseSelect();
             }
             this.loadingLeases = false;
           });
         } else {
+          if (this.tenantLeases.length > 0) {
+            this.selectedTenantLeaseId = this.tenantLeases[0].leaseId;
+            this.onTenantLeaseSelect();
+          }
           this.loadingLeases = false;
         }
       },
@@ -205,27 +262,45 @@ export class LeasesComponent implements OnInit {
     });
   }
 
+  onTenantLeaseSelect(): void {
+    if (!this.selectedTenantLeaseId) {
+      this.tenantLease = null;
+      this.tenantInvoices = [];
+      return;
+    }
+
+    const found = this.tenantLeases.find(l => l.leaseId === Number(this.selectedTenantLeaseId));
+    this.tenantLease = found || null;
+    this.tenantInvoices = this.tenantInvoicesMap.get(Number(this.selectedTenantLeaseId)) || [];
+    this.page = 1;
+  }
+
   onSubmit(): void {
     this.submitted = true;
     this.errorMessage = '';
     this.successMessage = '';
 
-    if (this.leaseForm.invalid) {
+    if (this.leaseForm.invalid || this.isAlreadyAgreed) {
       return;
     }
 
     this.submitting = true;
-    const { leaseId, status } = this.leaseForm.value;
+    const { leaseId, status } = this.leaseForm.getRawValue();
 
     this.apiService.updateLeaseStatus(Number(leaseId), status).subscribe({
       next: () => {
         this.submitting = false;
         this.successMessage = `Lease agreement #${leaseId} successfully set to ${status}!`;
-        this.leaseForm.reset();
-        this.submitted = false;
-        this.associatedApp = null;
-        this.selectedUnitId = '';
-        this.loadOwnerUnits(); // Reload
+        
+        if (status === 'Agreed') {
+          this.lockFormAsAgreed();
+        } else {
+          this.leaseForm.reset();
+          this.submitted = false;
+          this.associatedApp = null;
+          this.selectedUnitId = '';
+        }
+        this.loadOwnerUnits();
       },
       error: (err) => {
         this.submitting = false;

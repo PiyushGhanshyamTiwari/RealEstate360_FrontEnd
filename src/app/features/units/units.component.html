@@ -63,9 +63,17 @@
         </div>
         <div class="col-md-4 mb-3">
           <label class="form-label" for="availFrom">Available From Date</label>
-          <input type="date" id="availFrom" formControlName="availableFrom" class="form-control" [ngClass]="{ 'is-invalid': submitted && fu['availableFrom'].errors }">
+          <input 
+            type="date" 
+            id="availFrom" 
+            [min]="todayDate"
+            formControlName="availableFrom" 
+            class="form-control" 
+            [ngClass]="{ 'is-invalid': submitted && fu['availableFrom'].errors }"
+          >
           <div *ngIf="submitted && fu['availableFrom'].errors" class="invalid-feedback">
-            Available date is required.
+            <span *ngIf="fu['availableFrom'].errors['required']">Available date is required.</span>
+            <span *ngIf="fu['availableFrom'].errors['pastDate']">Date cannot be in the past. Please select today or a future date.</span>
           </div>
         </div>
       </div>
@@ -257,13 +265,17 @@
       
       <div class="col-md-6">
         <!-- Photo upload / display segment -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
           <h5 class="text-dark fw-bold mb-0">Unit Gallery</h5>
           <button *ngIf="isOwner" (click)="photoInput.click()" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1">
             <i class="bi bi-upload"></i> Upload Photo(s)
           </button>
-          <input type="file" #photoInput (change)="onUploadPhoto($event)" multiple class="d-none">
+          <input type="file" #photoInput (change)="onUploadPhoto($event)" accept="image/png, image/jpeg, image/jpg" multiple class="d-none">
         </div>
+        
+        <p class="text-muted small mb-3" style="font-size: 0.75rem;">
+          Allowed formats: PNG, JPG, JPEG (Max 5MB per file)
+        </p>
 
         <!-- Premium Interactive Photo Carousel -->
         <div *ngIf="photos.length > 0" class="unit-carousel-container position-relative rounded overflow-hidden shadow-sm mb-3"
@@ -278,7 +290,7 @@
                  alt="Rental Unit Slide Photo" />
             
             <div class="carousel-caption-overlay position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-60 text-white p-2 text-center small text-truncate">
-              {{ photos[currentPhotoIndex].caption || 'Unit Photo' }}
+              {{ photos[currentPhotoIndex].caption || ('Unit Photo ' + (currentPhotoIndex + 1)) }}
             </div>
           </div>
 
@@ -362,7 +374,7 @@
            alt="Full View Property Photo" />
       
       <div class="lightbox-caption text-white mt-3 text-center fw-medium px-3 py-1 rounded bg-dark bg-opacity-70">
-        {{ photos[currentPhotoIndex].caption || 'Unit Photo' }}
+        {{ photos[currentPhotoIndex].caption || ('Unit Photo ' + (currentPhotoIndex + 1)) }}
       </div>
     </div>
 
