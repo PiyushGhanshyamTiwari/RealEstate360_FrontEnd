@@ -75,7 +75,8 @@ export class InvoicesComponent implements OnInit {
   hasBillingAccess = false;
   isAccountOfficer = false;
   isTenant = false;
-  tenantProfileId = 1;
+  userId: number | null = null;
+  tenantProfileId: number | null = null;
 
   activeInvoiceForPayment: InvoiceOutputDTO | null = null;
   verificationOfficerId = '';
@@ -86,14 +87,18 @@ export class InvoicesComponent implements OnInit {
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
     if (user) {
+      this.userId = user.userId;
       const role = user.role.toUpperCase();
       this.hasBillingAccess = role === 'ACCOUNT OFFICER' || role === 'ADMIN';
       this.isAccountOfficer = role === 'ACCOUNT OFFICER';
       this.isTenant = role === 'TENANT';
 
+      // Read tenant profile ID from storage or user token object
       const cachedTenantId = localStorage.getItem(`re360_tenant_id_${user.userId}`);
       if (cachedTenantId) {
         this.tenantProfileId = Number(cachedTenantId);
+      } else {
+        this.tenantProfileId = (user as any).tenantId || (user as any).tenantProfileId || null;
       }
 
       if (this.isAccountOfficer) {
@@ -160,42 +165,67 @@ export class InvoicesComponent implements OnInit {
     this.loadingInvoices = true;
     this.tenantLeaseOptions = [];
 
-    this.apiService.getAllUnits().subscribe({
-      next: (units) => {
+    // Determine target tenant ID (prefer tenantProfileId, fallback to userId)
+    const targetTenantId = this.tenantProfileId || this.userId;
+
+    if (!targetTenantId) {
+      this.loadingLeases = false;
+      this.loadingInvoices = false;
+      return;
+    }
+
+    // Step 1: Fetch Units Map and Tenant's Official Leases concurrently
+    forkJoin({
+      units: this.apiService.getAllUnits().pipe(catchError(() => of([]))),
+      leases: this.apiService.getLeasesByTenantId(targetTenantId).pipe(
+        catchError(() => {
+          // Fallback: If tenantProfileId query failed, try using userId directly
+          if (this.userId && targetTenantId !== this.userId) {
+            return this.apiService.getLeasesByTenantId(this.userId);
+          }
+          return of([]);
+        })
+      )
+    }).subscribe({
+      next: ({ units, leases }) => {
         const unitsMap = new Map<number, UnitOutputDTO>();
         units.forEach(u => unitsMap.set(u.unitId, u));
 
-        const requests = [];
-        for (let i = 1; i <= 50; i++) {
-          requests.push(this.apiService.listInvoiceWithLeaseId(i).pipe(catchError(() => of([]))));
+        // Fallback: If no direct lease records are returned, check applications
+        if (!leases || leases.length === 0) {
+          this.fetchInvoicesViaApplications(unitsMap);
+          return;
         }
 
+        // Step 2: Query invoices ONLY for the lease IDs belonging to this active tenant
+        const requests = leases.map(lease => 
+          this.apiService.listInvoiceWithLeaseId(lease.leaseId).pipe(catchError(() => of([])))
+        );
+
         forkJoin(requests).subscribe({
-          next: (results) => {
+          next: (invoiceLists) => {
             const options: TenantLeaseOption[] = [];
-            results.forEach((list, index) => {
-              const leaseId = index + 1;
-              if (list && list.length > 0) {
-                const isMine = list.some(inv => inv.tenantId === this.tenantProfileId || inv.tenantId === 1);
-                if (isMine) {
-                  const matchedUnit = unitsMap.get(leaseId);
-                  options.push({
-                    leaseId: leaseId,
-                    unitId: matchedUnit?.unitId || leaseId,
-                    unitType: matchedUnit?.type || 'Unit',
-                    rentAmount: list[0]?.amountDue || 0
-                  });
-                }
-              }
+
+            leases.forEach((lease, index) => {
+              const invoiceList = invoiceLists[index] || [];
+              const matchedUnit = unitsMap.get(lease.unitId);
+
+              options.push({
+                leaseId: lease.leaseId,
+                unitId: lease.unitId,
+                unitType: matchedUnit?.type || 'Unit',
+                rentAmount: lease.rentAmount || invoiceList[0]?.amountDue || 0
+              });
             });
 
             this.tenantLeaseOptions = options;
             this.loadingLeases = false;
 
+            // Set default selected lease ID
             if (this.tenantLeaseOptions.length > 0 && !this.searchLeaseId) {
               this.searchLeaseId = this.tenantLeaseOptions[0].leaseId.toString();
             }
-            
+
             if (this.searchLeaseId) {
               this.onSearchInvoices();
             } else {
@@ -212,6 +242,58 @@ export class InvoicesComponent implements OnInit {
         this.loadingLeases = false;
         this.loadingInvoices = false;
       }
+    });
+  }
+
+  // Fallback method when leases table has no entries for this tenant
+  private fetchInvoicesViaApplications(unitsMap: Map<number, UnitOutputDTO>): void {
+    if (!this.userId) {
+      this.loadingLeases = false;
+      this.loadingInvoices = false;
+      return;
+    }
+
+    this.apiService.getApplicationByTenantId(this.userId).pipe(
+      catchError(() => of([]))
+    ).subscribe(apps => {
+      const validApps = apps.filter(a => a.status === 'Approved' || a.status === 'Agreed');
+      
+      if (validApps.length === 0) {
+        this.loadingLeases = false;
+        this.loadingInvoices = false;
+        return;
+      }
+
+      const requests = validApps.map(app => 
+        this.apiService.listInvoiceWithLeaseId(app.applicationId).pipe(catchError(() => of([])))
+      );
+
+      forkJoin(requests).subscribe(invoiceLists => {
+        const options: TenantLeaseOption[] = [];
+
+        validApps.forEach((app, index) => {
+          const matchedUnit = unitsMap.get(app.unitId);
+          options.push({
+            leaseId: app.applicationId,
+            unitId: app.unitId,
+            unitType: app.type || matchedUnit?.type || 'Unit',
+            rentAmount: invoiceLists[index]?.[0]?.amountDue || 0
+          });
+        });
+
+        this.tenantLeaseOptions = options;
+        this.loadingLeases = false;
+
+        if (this.tenantLeaseOptions.length > 0 && !this.searchLeaseId) {
+          this.searchLeaseId = this.tenantLeaseOptions[0].leaseId.toString();
+        }
+
+        if (this.searchLeaseId) {
+          this.onSearchInvoices();
+        } else {
+          this.loadingInvoices = false;
+        }
+      });
     });
   }
 
@@ -309,7 +391,7 @@ export class InvoicesComponent implements OnInit {
         setTimeout(() => this.successMessage = '', 4000);
         this.closePaymentModal();
         
-        // Re-fetch from the database to get the newly updated timestamp saved by Spring Boot
+        // Re-fetch from database to refresh timestamp
         this.onSearchInvoices();
       },
       error: (err) => {
