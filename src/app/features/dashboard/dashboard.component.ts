@@ -57,7 +57,8 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
     if (user) {
-      this.role = user.role ? user.role.toUpperCase() : '';
+      // Normalize role checking (handles spaces and underscores, e.g., 'ACCOUNT_OFFICER' vs 'ACCOUNT OFFICER')
+      this.role = user.role ? user.role.toUpperCase().replace('_', ' ').trim() : '';
       this.userId = user.userId;
       this.checkProfileSetup();
       this.loadDashboardData();
@@ -80,8 +81,8 @@ export class DashboardComponent implements OnInit {
       this.apiService.getTenantByUserId(this.userId).pipe(
         catchError(() => of(null))
       ).subscribe({
-        next: (profile) => {
-          if (profile && (profile.tenantId || (profile as any).id)) {
+        next: (profile: any) => {
+          if (profile && (profile.tenantId || profile.id)) {
             this.profileMissing = false;
             localStorage.setItem(`re360_tenant_profile_registered_${this.userId!}`, 'true');
           } else {
@@ -104,8 +105,8 @@ export class DashboardComponent implements OnInit {
       this.apiService.getTechnicianById(this.userId).pipe(
         catchError(() => of(null))
       ).subscribe({
-        next: (profile) => {
-          if (profile && (profile.technicianId || (profile as any).id)) {
+        next: (profile: any) => {
+          if (profile && (profile.technicianId || profile.id)) {
             this.profileMissing = false;
             localStorage.setItem(`re360_technician_profile_registered_${this.userId!}`, 'true');
           } else {
@@ -128,8 +129,8 @@ export class DashboardComponent implements OnInit {
       this.apiService.getOfficerById(this.userId).pipe(
         catchError(() => of(null))
       ).subscribe({
-        next: (profile) => {
-          if (profile && (profile.officerId || (profile as any).id)) {
+        next: (profile: any) => {
+          if (profile && (profile.officerId || profile.id)) {
             this.profileMissing = false;
             localStorage.setItem(`re360_officer_profile_registered_${this.userId!}`, 'true');
           } else if (user?.emailId) {

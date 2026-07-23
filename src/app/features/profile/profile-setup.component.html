@@ -14,7 +14,7 @@
     <span>{{ successMessage }}</span>
   </div>
 
-  <!-- Existing Profile Details view -->
+  <!-- Existing Profile Details View -->
   <div *ngIf="existingProfile && !isEditing" class="card glass-panel p-4 mb-4">
     <div class="d-flex align-items-center gap-3 mb-4">
       <div class="avatar text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm"
@@ -38,11 +38,11 @@
         <span class="text-dark">{{ authService.currentUserValue?.phone }}</span>
       </div>
 
-      <!-- Dynamic details based on role -->
+      <!-- TENANT DETAILS -->
       <ng-container *ngIf="role === 'TENANT'">
         <div class="col-12">
           <span class="text-muted d-block small">Address</span>
-          <span class="text-dark">{{ existingProfile.address || 'Address Not Provided' }}</span>
+          <span class="text-dark">{{ existingProfile.address || existingProfile['Address'] || 'Address Not Provided' }}</span>
         </div>
 
         <div class="col-sm-6">
@@ -60,7 +60,6 @@
               {{ existingProfile.documentFileRef || 'Document Not Uploaded' }}
             </span>
 
-            <!-- Hide view button if document is not uploaded -->
             <button 
               *ngIf="selectedFile || existingProfile.documentFileRef"
               type="button"
@@ -73,6 +72,7 @@
         </div>
       </ng-container>
 
+      <!-- TECHNICIAN DETAILS -->
       <ng-container *ngIf="role === 'TECHNICIAN'">
         <div class="col-sm-6">
           <span class="text-muted d-block small">Specialization</span>
@@ -88,6 +88,7 @@
         </div>
       </ng-container>
 
+      <!-- ACCOUNT OFFICER DETAILS -->
       <ng-container *ngIf="role === 'ACCOUNT OFFICER'">
         <div class="col-12">
           <span class="text-muted d-block small">Office Full Name</span>
@@ -95,7 +96,7 @@
         </div>
         <div class="col-12">
           <span class="text-muted d-block small">Office Location Address</span>
-          <span class="text-dark">{{ existingProfile.address }}</span>
+          <span class="text-dark">{{ existingProfile.address || existingProfile['Address'] }}</span>
         </div>
       </ng-container>
     </div>
@@ -116,7 +117,7 @@
   <!-- Profile Setup / Edit Forms -->
   <div *ngIf="(!existingProfile && !loadingProfile) || isEditing" class="card glass-panel p-4 p-sm-5">
     
-    <!-- BASE ACCOUNT UPDATE FORM -->
+    <!-- ACCOUNT CREDENTIALS FORM -->
     <form *ngIf="editMode === 'ACCOUNT'" [formGroup]="userForm" (ngSubmit)="onAccountSubmit()">
       <h4 class="fw-bold mb-3 text-gradient">Update Account Credentials</h4>
       
@@ -152,7 +153,7 @@
       </div>
     </form>
 
-    <!-- TENANT PROFILE FORM -->
+    <!-- TENANT FORM -->
     <form *ngIf="editMode === 'PROFILE' && role === 'TENANT'" [formGroup]="tenantForm" (ngSubmit)="onTenantSubmit()">
       <h4 class="fw-bold mb-3 text-gradient">Tenant Profile Details</h4>
       
@@ -206,7 +207,7 @@
       </div>
     </form>
 
-    <!-- TECHNICIAN PROFILE FORM -->
+    <!-- TECHNICIAN FORM -->
     <form *ngIf="editMode === 'PROFILE' && role === 'TECHNICIAN'" [formGroup]="technicianForm" (ngSubmit)="onTechnicianSubmit()">
       <h4 class="fw-bold mb-3 text-gradient">Technician Profile Details</h4>
       <div class="row mb-4">
@@ -242,7 +243,7 @@
       </div>
     </form>
 
-    <!-- ACCOUNT OFFICER PROFILE FORM -->
+    <!-- ACCOUNT OFFICER FORM -->
     <form *ngIf="editMode === 'PROFILE' && role === 'ACCOUNT OFFICER'" [formGroup]="officerForm" (ngSubmit)="onOfficerSubmit()">
       <h4 class="fw-bold mb-3 text-gradient">Account Officer Profile Details</h4>
       <div class="mb-3">
@@ -273,7 +274,7 @@
 </div>
 
 <!-- DOCUMENT REFERENCE MODAL -->
-<div *ngIf="showDocModal" class="modal fade show d-block tab-index-1" style="background-color: rgba(0, 0, 0, 0.5);" role="dialog">
+<div *ngIf="showDocModal" class="modal fade show d-block" style="background-color: rgba(0, 0, 0, 0.5);" role="dialog">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content text-dark border-0 shadow">
       <div class="modal-header border-bottom-0 pb-0">
